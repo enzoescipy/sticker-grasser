@@ -1,0 +1,3 @@
+[submodule "sticker_grasser_react"]
+	path = sticker_grasser_react
+	url = https://github.com/SciKa/sticker_grasser_react.git

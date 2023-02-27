@@ -1,0 +1,13 @@
+#virtual enviroments for Dev
+/pyvenv
+/node_modules
+/package-lock.json
+/package.json
+
+#file cache
+/restAPI/__pycache__
+/sticker_grasser_main/__pycache__
+
+#ignore stisticker_grasser_react's all files except for /build/
+!/sticker_grasser_react/build
+*/sticker_grasser_react

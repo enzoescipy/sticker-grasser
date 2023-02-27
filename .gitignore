@@ -1,0 +1,13 @@
+#virtual enviroments for Dev
+pyvenv/
+node_modules/
+package-lock.json
+
+#file caches
+restAPI/__pycache__/
+sticker_grasser_main/__pycache__/
+
+#django DBs
+restAPI/migrations
+db.sqlite3
+
