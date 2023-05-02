@@ -1,5 +1,6 @@
 from django.contrib import admin
 
-from .models import testData
+from . import models
 
-admin.site.register(testData)
+admin.site.register(models.User)
+admin.site.register(models.Project)

@@ -1,0 +1,45 @@
+0. user distinguishable log-in informations
+{
+    primary_key : <hash>
+    nickname : <string>
+    id : <string>
+    password : <hash> // sha hashed user input
+}
+
+1. user to-do + project_name
+{
+    primary_key : <hash>,
+    user_distinct_key : <hash>,
+    proj_name : <string>,
+    todo_name : <string>,
+    icon : <string>,
+}
+(if record means only project settings, todo is null.)
+
+2. user stamps
+{
+    primary_key : <hash>,
+    user_distinct_key : <hash>,
+    name : <string>,
+    icon : <string>,
+    sub-properties :[
+        [<string|function name>, [<var_0>,<var_1>,...], <hash>],
+        ["discrete_point", ["pages","positive_nonzero", null, null, "accumulate"]],
+        // hash would be made by put function name and variables into sha func.
+    ]
+}
+(there will be "some func" that interpret the sub-properties and returns what value should a stamp has.)
+
+3. main record
+{
+    primary_key : <hash>
+    user_todo_key : <hash>
+    user_stamps_key : <hash>
+    target_date : <string|datetime_format>
+    sub_variable : {
+        value : 12,
+        upperbound : 450,
+        accumulated : 132,
+    }
+    // sub_question is made by 2. 's "some func". 
+}

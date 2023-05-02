@@ -52,7 +52,7 @@ def batfunc(argvList):
                     tag = subprocess.run(["git","log","--abbrev-commit","--pretty=oneline"], text=True, capture_output=True)
                     tag = tag.stdout
                     tag = tag[:tag.find(" ")]
-                    liveprint_exec(["autogit\push_docker.bat", "ghcr.io/scika/sticker_grasser:" + tag])
+                    liveprint_exec(["autogit\push_docker.bat", "ghcr.io/enzoescipy/sticker_grasser:" + tag])
                     
                 elif follow == "git" : 
                     print("push git execute.")
@@ -68,10 +68,10 @@ def fronter():
     print("---------------welcome to AUTO_GIT-----------------")
     print("exit : exit process")
     print("commit : commit sth. ")
-    print("    commit docker > build docker images. tag will be ghcr.io/scika/sticker_grasser:pending")
+    print("    commit docker > build docker images. tag will be ghcr.io/enzoescipy/sticker_grasser:pending")
     print("    commit git    > add current changes and commit with msg. will be applied to both main, react repos.")
     print("push : push sth.")
-    print("    push docker   > push ghcr.io/scika/sticker_grasser:pending. tag will be change to latest local git commit hashcode.")
+    print("    push docker   > push ghcr.io/enzoescipy/sticker_grasser:pending. tag will be change to latest local git commit hashcode.")
     print("    push git      > push git. will be applied to both main, react repos.")
     print("add : git add to repo and submodules. (only work like <add> , not like <commit docker git add>")
     print("if you put command like <push docker git>, autogit will change the orders to <push git docker>.")
