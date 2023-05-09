@@ -61,3 +61,106 @@ class Project_project(serializers.ModelSerializer):
         model = models.Project
 
 #endregion
+
+#region  STAMP
+
+class Stamp_all(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'user_id',
+            'stamp_name',
+            'subelement_name',
+            'defFunc_name',
+            'arg_name',
+            'arg_val',
+            'arg_type'
+        )
+        model = models.Stamp
+
+class Stamp_arg(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'user_id',
+            'stamp_name',
+            'subelement_name',
+            'arg_name'
+        )
+        model = models.Stamp
+
+class Stamp_subelement(serializers.ModelSerializer):
+    class Meta:
+        arg_name = ''
+        arg_val = ''
+        arg_type = ''
+        fields = (
+            'user_id',
+            'stamp_name',
+            'subelement_name',
+            'defFunc_name',
+        )
+        model = models.Stamp
+
+class Stamp_subelement_retrieve(serializers.ModelSerializer):
+    class Meta:
+        arg_name = ''
+        arg_val = ''
+        arg_type = ''
+        fields = (
+            'user_id',
+            'stamp_name',
+            'subelement_name',
+
+        )
+        model = models.Stamp
+
+class Stamp_stamp(serializers.ModelSerializer):
+    class Meta:
+        arg_name = ''
+        arg_val = ''
+        arg_type = ''
+        subelement_name = ''
+        defFunc_name = ''
+        fields = (
+            'user_id',
+            'stamp_name',
+        )
+        model = models.Stamp
+
+
+#endregion
+
+
+# region MAIN
+
+class Main_all(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'user_id',
+            'stamp_id',
+            'date',
+            'arg_name',
+            'arg_val',
+            'arg_type'
+        )
+        model = models.Main
+
+class Main_main(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'user_id',
+            'stamp_id',
+            'date',
+        )
+        model = models.Main
+
+class Main_arg(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'user_id',
+            'stamp_id',
+            'date',
+            'arg_name',
+        )
+        model = models.Main
+
+# endregion
