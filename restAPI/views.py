@@ -11,6 +11,9 @@ from copy import deepcopy
 from . import models
 from . import serializers
 
+from . import subelement as sub
+
+
 """
 security level : 
     rwdc0 -> nobody can [read/write/delete/create] these value, debug checking only.
@@ -328,7 +331,6 @@ class Stamp_CREATE_arg(generics.CreateAPIView):
         - subelement_name : subelement_name that already be exists
         - arg_name : element's key part.
         - arg_val : element's value part.
-        - arg_type : element's type part.
     database changes
         - model Stamp will get new row of Stamp.
         - row will created with subelement_name=<subelement_name>, defFunc_name='', also argname&val&type respectively.
@@ -347,7 +349,7 @@ class Stamp_CREATE_arg(generics.CreateAPIView):
         if (self.request.POST.get('arg_name') == '' or self.request.POST.get('arg_name') == None 
             or self.request.POST.get('arg_val') == '' or self.request.POST.get('arg_val') == None 
             or self.request.POST.get('arg_val') == '' or self.request.POST.get('arg_val') == None):
-            raise exceptions.ValidationError('arg_name, arg_val, arg_type cannot be null or blank')
+            raise exceptions.ValidationError('arg_name, arg_val cannot be null or blank')
     
         queryset = models.Stamp.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
                                                  & Q(stamp_name = self.request.POST.get('stamp_name'))
@@ -361,8 +363,7 @@ class Stamp_CREATE_arg(generics.CreateAPIView):
                                             & Q(subelement_name = self.request.POST.get('subelement_name'))
                                             & Q(defFunc_name = self.request.POST.get('defFunc_name'))
                                             & Q(arg_name = self.request.POST.get('arg_name'))
-                                            & Q(arg_val = self.request.POST.get('arg_val'))
-                                            & Q(arg_type = self.request.POST.get('arg_type')))
+                                            & Q(arg_val = self.request.POST.get('arg_val')))
 
     def create(self, request, *args, **kwargs):
         self.query_validation()

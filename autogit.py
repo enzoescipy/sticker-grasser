@@ -25,7 +25,7 @@ def batfunc(argvList):
         follows = []
         if len(argvList) >= 2 and argvList[1] != "commit" and argvList[1] != "push":
             follows.append(argvList.pop(0))
-            follows.append(argvList.pop(0))
+            follows.append(argvList.pop(0)) 
         elif argvList[0] != "commit" and argvList[0] != "push":
             follows.append(argvList.pop(0))
 

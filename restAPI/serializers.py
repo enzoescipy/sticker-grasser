@@ -73,7 +73,6 @@ class Stamp_all(serializers.ModelSerializer):
             'defFunc_name',
             'arg_name',
             'arg_val',
-            'arg_type'
         )
         model = models.Stamp
 
@@ -91,7 +90,6 @@ class Stamp_subelement(serializers.ModelSerializer):
     class Meta:
         arg_name = ''
         arg_val = ''
-        arg_type = ''
         fields = (
             'user_id',
             'stamp_name',
@@ -104,7 +102,6 @@ class Stamp_subelement_retrieve(serializers.ModelSerializer):
     class Meta:
         arg_name = ''
         arg_val = ''
-        arg_type = ''
         fields = (
             'user_id',
             'stamp_name',
@@ -117,7 +114,6 @@ class Stamp_stamp(serializers.ModelSerializer):
     class Meta:
         arg_name = ''
         arg_val = ''
-        arg_type = ''
         subelement_name = ''
         defFunc_name = ''
         fields = (
@@ -140,7 +136,6 @@ class Main_all(serializers.ModelSerializer):
             'date',
             'arg_name',
             'arg_val',
-            'arg_type'
         )
         model = models.Main
 

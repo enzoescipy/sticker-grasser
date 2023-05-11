@@ -24,8 +24,8 @@
     1. after adjusting codes, 
         - check if docker desktop is running.
         - execute autogit.bat
-        - run "commit docker". it will automatically generate the 'ghcr.io/scika/sticker_grasser_temp:pending' tagged image in docker.
-        - open bash, and run "docker run -d -p 8000:8000 ghcr.io/scika/sticker_grasser_temp:pending".
+        - run "commit docker". it will automatically generate the 'ghcr.io/enzoescipy/sticker_grasser:pending' tagged image in docker.
+        - open bash, and run "docker run -d -p 8000:8000 ghcr.io/enzoescipy/sticker_grasser:pending".
         - test sth you want.
     2. in closure,
         - check if docker desktop is running.
@@ -43,9 +43,9 @@
 # when you want to push the everything in this repo
     - autogit.bat "push git" will be work just great.
     - autogit.bat "push docker" will do,
-        - push current 'ghcr.io/scika/sticker_grasser_temp:pending' image into the github container regisistry, or, the github packages.
-        - image's name will be decided to 'ghcr.io/scika/sticker_grasser_temp:<git_commit_hash>' which <git_commit_hash> is newist git repo's commit's hashtag.
-        - So, you can now download that image in the server by run the "docker pull ghcr.io/scika/sticker_grasser_temp:<git_commit_hash>".
+        - push current 'ghcr.io/enzoescipy/sticker_grasser:pending' image into the github container regisistry, or, the github packages.
+        - image's name will be decided to 'ghcr.io/enzoescipy/sticker_grasser:<git_commit_hash>' which <git_commit_hash> is newist git repo's commit's hashtag.
+        - So, you can now download that image in the server by run the "docker pull ghcr.io/enzoescipy/sticker_grasser:<git_commit_hash>".
         - WARNING : do not download :latest tag. it can be not the latest.
     - And the autogit.bat "push git docker" will first do git commit -> git push -> and then docker push.
 

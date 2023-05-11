@@ -64,7 +64,6 @@ class Stamp(models.Model):
 
         - arg_name : subElements-> arg_dict -> key
         - arg_val : subElements-> arg_dict -> val
-        - arg_type : subElements-> arg_dict -> type(key)
     """
     user_id = models.ForeignKey('User', related_name='stamp_user', on_delete=models.CASCADE, db_column='user_id')
     stamp_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
@@ -74,10 +73,9 @@ class Stamp(models.Model):
 
     arg_name = models.CharField(max_length=254, unique=False, null=False, blank=True)
     arg_val = models.CharField(max_length=254, unique=False, null=False, blank=True)
-    arg_type = models.CharField(max_length=254, unique=False, null=False, blank=True)
 
     def __str__(self):
-        return f"{self.user_id}:{self.stamp_name}  [{self.subelement_name}, {self.defFunc_name}] -> <{self.arg_name}:{self.arg_val} ({self.arg_type}) >"
+        return f"{self.user_id}:{self.stamp_name}  [{self.subelement_name}, {self.defFunc_name}] -> <{self.arg_name}:{self.arg_val} >"
     
 
 class Main(models.Model):
@@ -98,7 +96,6 @@ class Main(models.Model):
 
         - arg_name : arg_dict -> key
         - arg_val : arg_dict -> val
-        - arg_type : arg_dict -> type(key)
     """
 
     user_id = models.ForeignKey('User', related_name='main_user', on_delete=models.CASCADE, db_column='user_id')
@@ -109,8 +106,7 @@ class Main(models.Model):
 
     arg_name = models.CharField(max_length=254, unique=False, null=False, blank=True)
     arg_val = models.CharField(max_length=254, unique=False, null=False, blank=True)
-    arg_type = models.CharField(max_length=254, unique=False, null=False, blank=True)
 
     def __str__(self):
-        return f"{self.user_id}:{self.stamp_id}:{str(self.date)}   <{self.arg_name}:{self.arg_val} ({self.arg_type}) >"
+        return f"{self.user_id}:{self.stamp_id}:{str(self.date)}   <{self.arg_name}:{self.arg_val} >"
     
