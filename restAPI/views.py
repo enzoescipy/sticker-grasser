@@ -1,6 +1,6 @@
 #backend/post/views.py
 from django.shortcuts import render, get_object_or_404
-from rest_framework import generics, mixins
+from rest_framework import generics, mixins, status
 from rest_framework import permissions as secure
 from rest_framework.views import exceptions
 from rest_framework.response import Response
@@ -298,7 +298,7 @@ class Stamp_CREATE_subelement(generics.CreateAPIView):
         - row will created with subelement_name=<subelement_name>, defFunc_name=<defFunc_name>
     """
 
-    serializer_class = serializers.Stamp_subelement
+    serializer_class = serializers.Stamp_subelement_argsGet
     permission_classes = []
 
     def query_validation(self):
@@ -317,57 +317,54 @@ class Stamp_CREATE_subelement(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         self.query_validation()
-        return super().create(request, *args, **kwargs)
 
-class Stamp_CREATE_arg(generics.CreateAPIView):
-    """
-    # Stamp_CREATE_subelement
-        SECURITY LEVEL c2
-        - create an subelement on the existing subelement
-        - if named subelement is not already exist in stamp, reject request. 
-    POST params
-        - user_id : specific user's id. 
-        - stamp_name : stamp_name already exists.
-        - subelement_name : subelement_name that already be exists
-        - arg_name : element's key part.
-        - arg_val : element's value part.
-    database changes
-        - model Stamp will get new row of Stamp.
-        - row will created with subelement_name=<subelement_name>, defFunc_name='', also argname&val&type respectively.
-    """
+        user_id = self.request.POST.get('user_id')
+        stamp_name = self.request.POST.get('stamp_name')
+        subelement_name = self.request.POST.get('subelement_name')
+        defFunc_name = self.request.POST.get('defFunc_name')
 
-    serializer_class = serializers.Stamp_subelement
-    permission_classes = []
 
-    def query_validation(self):
-        queryset = models.Stamp.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
-                                                 & Q(stamp_name = self.request.POST.get('stamp_name'))
-                                                 & Q(subelement_name = self.request.POST.get('subelement_name')))
-        if queryset.exists() == False:
-            raise exceptions.ValidationError('stamp_name must already exists in the db with the corresponding user_id.')
-        
-        if (self.request.POST.get('arg_name') == '' or self.request.POST.get('arg_name') == None 
-            or self.request.POST.get('arg_val') == '' or self.request.POST.get('arg_val') == None 
-            or self.request.POST.get('arg_val') == '' or self.request.POST.get('arg_val') == None):
-            raise exceptions.ValidationError('arg_name, arg_val cannot be null or blank')
-    
-        queryset = models.Stamp.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
-                                                 & Q(stamp_name = self.request.POST.get('stamp_name'))
-                                                 & Q(subelement_name = self.request.POST.get('subelement_name'))
-                                                 & Q(arg_name = self.request.POST.get('arg_name')))
-        if queryset.exists() == True:
-            raise exceptions.ValidationError('arg_name must NOT already exists in the db.')
-    def get_queryset(self):
-        return models.Stamp.objects.filter(Q(user_id=self.request.POST.get('user_id'))
-                                            & Q(stamp_name = self.request.POST.get('stamp_name'))
-                                            & Q(subelement_name = self.request.POST.get('subelement_name'))
-                                            & Q(defFunc_name = self.request.POST.get('defFunc_name'))
-                                            & Q(arg_name = self.request.POST.get('arg_name'))
-                                            & Q(arg_val = self.request.POST.get('arg_val')))
+        # arg_names, arg_vals split with blank
+        arg_names = self.request.POST.get("arg_names")
+        arg_vals = self.request.POST.get("arg_vals")
+        arg_names = arg_names.split(' ')
+        arg_vals = arg_vals.split(' ')
 
-    def create(self, request, *args, **kwargs):
-        self.query_validation()
-        return super().create(request, *args, **kwargs)
+        # args validation for len()
+        if len(arg_names) != len(arg_vals):
+            raise exceptions.ValidationError('arg_names and arg_vals must have the same length of elements as sep=\' \'.')
+
+        # make subelement set dict
+        set_dict = None
+        if defFunc_name == "discrete_point" :
+            args_dict = dict(zip(arg_names, arg_vals))
+            set_dict = sub.Discrete_point.subelement_set(**args_dict)
+        else :
+            raise exceptions.ValidationError('wrong name : defFunc_name ')
+
+
+        # create arg_rows in models.Stamp
+        for k,v in set_dict.items():
+            arg_name = k
+            arg_val = v
+            models.Stamp.objects.create(user_id=models.User.objects.get(id=int(user_id)), 
+                                        stamp_name=stamp_name, 
+                                        subelement_name=subelement_name,
+                                        defFunc_name = defFunc_name,
+                                        arg_name = arg_name,
+                                        arg_val = arg_val)
+
+        models.Stamp.objects.create(user_id=models.User.objects.get(id=int(user_id)), 
+                                        stamp_name=stamp_name, 
+                                        subelement_name=subelement_name,
+                                        defFunc_name = defFunc_name) # create subelement descriptional row
+
+        # make response then return
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 class Stamp_RETRIEVE_user(generics.ListAPIView):
     """

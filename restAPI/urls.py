@@ -15,7 +15,7 @@ urlpatterns = [
     
     path('stamp/create/stamp', views.Stamp_CREATE_stamp.as_view(), name='stamp_create_stamp'),
     path('stamp/create/subelement', views.Stamp_CREATE_subelement.as_view(), name='stamp_create_subelement'),
-    path('stamp/create/arg', views.Stamp_CREATE_arg.as_view(), name='stamp_create_arg'),
+    # path('stamp/create/arg', views.Stamp_CREATE_arg.as_view(), name='stamp_create_arg'),
     path('stamp/retrieve/user/<user_id>', views.Stamp_RETRIEVE_user.as_view(), name='stamp_retrieve_user'),
     path('stamp/retrieve/stamp', views.Stamp_RETRIEVE_stamp.as_view(), name='stamp_retrieve_stamp'),
     path('stamp/retrieve/subelement', views.Stamp_RETRIEVE_subelement.as_view(), name='stamp_retrieve_subelement'),

@@ -221,6 +221,6 @@ class Discrete_point():
         return result
     
 
-
-
-
+loc = {
+    "discrete_point" : Discrete_point,
+}

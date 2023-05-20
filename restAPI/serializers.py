@@ -82,9 +82,19 @@ class Stamp_arg(serializers.ModelSerializer):
             'user_id',
             'stamp_name',
             'subelement_name',
-            'arg_name'
+            'arg_name',
         )
         model = models.Stamp
+
+class Stamp_subelement_argsGet(serializers.Serializer):
+    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
+
+    stamp_name = serializers.CharField()
+    subelement_name = serializers.CharField()
+    defFunc_name = serializers.CharField()
+
+    arg_names = serializers.CharField()
+    arg_vals = serializers.CharField()
 
 class Stamp_subelement(serializers.ModelSerializer):
     class Meta:
