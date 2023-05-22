@@ -119,10 +119,10 @@ class Discrete_point():
         return result
 
     @classmethod
-    def subvar_set(cls, subelement_queryset, value):
+    def subvar_set(cls, subelement_queryset, *value_list):
         """
         # subvar_set
-            - Main model is not decide what subvars should put in the arg.
+            - Main model dosen't decide what subvars should put in the arg.
             - this function inspect the Stamp model's arg then decide the subvar instead.
 
         Args:
@@ -135,8 +135,12 @@ class Discrete_point():
         """
 
         # param validation
-        if type(value) != type(0) :
-            raise TypeError("target_value must be int.")
+        value = value_list[0]
+        try:
+            value = int(value)
+        except Exception:
+            raise TypeError("value should be able to converted to the integer.")
+        
 
         # get args from queryset
         parsed_db = {}
@@ -161,7 +165,7 @@ class Discrete_point():
         # accumulated value calculation
         if parsed_db['is_accumulated'] == True:
             user_id = getattr(subelement_queryset[0], 'user_id')
-            stamp_id = getattr(subelement_queryset[0], 'stamp_id')
+            stamp_id = getattr(subelement_queryset[0], 'id')
 
             #find the records of user, with matching stamp_id
             filtered_recode = models.Main.objects.filter(user_id = user_id, stamp_id = stamp_id, arg_name='value')

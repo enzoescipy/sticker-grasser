@@ -3,21 +3,6 @@ from . import models
 
 
 #region USER
-class User_all(serializers.ModelSerializer):
-    class Meta:
-        fields = (
-            'id',
-            'username',
-            'email',
-            'password',
-            'is_staff',
-            'is_active',
-            'is_superuser',
-            'last_login',
-            'date_joined'
-        )
-        model = models.User
-        
 class User_createSafe(serializers.ModelSerializer):
     class Meta:
         fields = (
@@ -26,17 +11,14 @@ class User_createSafe(serializers.ModelSerializer):
             'password',
         )
         model = models.User
+    
+    def create(self, validated_data):
+        user = super().create(validated_data)
+        password = user.password
+        user.set_password(password)
+        user.save()
+        return user
 
-class User_readSafe(serializers.ModelSerializer):
-    class Meta:
-        fields = (
-            'id',
-            'username',
-            'email',
-            'last_login',
-            'date_joined'
-        )
-        model = models.User
 #endregion
 
 
@@ -57,6 +39,14 @@ class Project_project(serializers.ModelSerializer):
         fields = (
             'user_id',
             'project_name',
+        )
+        model = models.Project
+
+class Project_user(serializers.ModelSerializer):
+    todo_name = ''
+    class Meta:
+        fields = (
+            'user_id',
         )
         model = models.Project
 
@@ -132,6 +122,16 @@ class Stamp_stamp(serializers.ModelSerializer):
         )
         model = models.Stamp
 
+class Stamp_user(serializers.ModelSerializer):
+    class Meta:
+        arg_name = ''
+        arg_val = ''
+        subelement_name = ''
+        defFunc_name = ''
+        fields = (
+            'user_id',
+        )
+        model = models.Stamp
 
 #endregion
 
@@ -167,5 +167,13 @@ class Main_arg(serializers.ModelSerializer):
             'arg_name',
         )
         model = models.Main
+
+class Main_main_argsGet(serializers.Serializer):
+    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all())
+    stamp_id = serializers.PrimaryKeyRelatedField(queryset=models.Stamp.objects.all())
+
+    date = serializers.DateField()
+
+    main_vals = serializers.CharField()
 
 # endregion

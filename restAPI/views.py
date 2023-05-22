@@ -1,7 +1,8 @@
 #backend/post/views.py
 from django.shortcuts import render, get_object_or_404
+from django.contrib.auth import get_user_model  
 from rest_framework import generics, mixins, status
-from rest_framework import permissions as secure
+from rest_framework import permissions 
 from rest_framework.views import exceptions
 from rest_framework.response import Response
 from django.db.models import Q
@@ -16,35 +17,31 @@ from . import subelement as sub
 
 """
 security level : 
-    rwdc0 -> nobody can [read/write/delete/create] these value, debug checking only.
-    rwdc1 -> only superuser can [read/write/delete/create] these value.
-    rwdc2 -> only the authorized user can [read/write/delete/create] these value
-        - rwdc range will be bounded in CURRENT user only. so, one cannot rwdc the other's data.
-    rwdc3 -> all the un-authorized users can [read/write/delete/create] these value. 
+    rwdc0 -> nobody can [read/write/delete/create] these value, superuser only.
+    rwdc1 -> only staff can [read/write/delete/create] these value.
+    rwdc2 -> only the authorized user can access this view, only for the limited range.
+        - one cannot rwdc the other user's data. that means requested user_id could be mached to loggined user_id.
+    rwdc3 -> only the authorized user can [read/write/delete/create] these value freely.
+    rwdc4 -> all the un-authorized users can [read/write/delete/create] these value. 
 """
+class IsOwner_permission_Mixin:
+    def query_validation(self):
+        # check if owner of instance is matched the caller of this view.
+        logged_in_user = self.request.user
+        requested_user_id = int(self.request.POST.get("user_id"))
+        logged_in_user_id = getattr(logged_in_user, "id")
+        
+        if logged_in_user_id != requested_user_id:
+            superuser = getattr(logged_in_user, "is_superuser")
+            if superuser != True:
+                raise exceptions.ValidationError("current logged in user have not owned licence for this request.")
 
 #region USER API
-
-class User_RETRIEVE(generics.RetrieveAPIView):
-    """
-    # User_RETRIEVE
-        SECURITY LEVEL r3 
-        - get the specific user's information.
-        - key param is <id> 
-    GET params
-        - id (char) : User model's id row.
-    """
-    serializer_class = serializers.User_readSafe
-    permission_classes = []
-    lookup_field = 'username'
-
-    def get_queryset(self):
-        return models.User.objects.filter(username = self.kwargs['username'])
 
 class User_CREATE_unauthorized(generics.CreateAPIView):
     """
     # User_CREATE
-        SECURITY LEVEL c2
+        SECURITY LEVEL c4
         - create an user
         - staff, superuser will be always false
     POST params
@@ -58,12 +55,19 @@ class User_CREATE_unauthorized(generics.CreateAPIView):
     serializer_class = serializers.User_createSafe
     permission_classes = []
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response({}, status=status.HTTP_201_CREATED, headers=headers)
+
 #endregion
 
 #region PROJECT API
 
 
-class Project_CREATE_project(generics.CreateAPIView):
+class Project_CREATE_project(generics.CreateAPIView, IsOwner_permission_Mixin):
     """
     # Project_CREATE_project
         SECURITY LEVEL c2
@@ -76,9 +80,14 @@ class Project_CREATE_project(generics.CreateAPIView):
         - row will created with todo_name='' (blank)
     """
     serializer_class = serializers.Project_project
-    permission_classes = []
+    queryset = models.Project.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
 
-class Project_CREATE_todo(generics.CreateAPIView):
+    def create(self, request, *args, **kwargs):
+        self.query_validation()
+        return super().create(request, *args, **kwargs)
+    
+class Project_CREATE_todo(generics.CreateAPIView, IsOwner_permission_Mixin):
     """
     # Project_CREATE_todo
         SECURITY LEVEL c2
@@ -95,9 +104,10 @@ class Project_CREATE_todo(generics.CreateAPIView):
     """
 
     serializer_class = serializers.Project_all
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         queryset = models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
                                                  & Q(user_id = self.request.POST.get('user_id')))
         if queryset.exists() == False:
@@ -120,7 +130,7 @@ class Project_CREATE_todo(generics.CreateAPIView):
         self.query_validation()
         return super().create(request, *args, **kwargs)
 
-class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView):
+class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Project_RETRIEVE_project
         SECURITY LEVEL r2
@@ -132,7 +142,7 @@ class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView):
     """
 
     serializer_class = serializers.Project_project
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if len(self.request.POST) == 0:
@@ -141,6 +151,7 @@ class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView):
             return serializers.Project_all
         
     def query_validation(self):
+        super().query_validation()
         if len(self.request.POST) == 0:
             return models.Project.objects.none()
         
@@ -159,7 +170,7 @@ class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView):
         self.query_validation()
         return self.list(request, *args, **kwargs)
 
-class Project_RETRIEVE_user(generics.ListAPIView):
+class Project_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Project_RETRIEVE_user
         SECURITY LEVEL r2
@@ -169,14 +180,24 @@ class Project_RETRIEVE_user(generics.ListAPIView):
         - user_id
     """
 
-    serializer_class = serializers.Project_project
-    permission_classes = []
-    lookup_field = 'user_id'
+    serializer_class = serializers.Project_user
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self):
+        if len(self.request.POST) == 0:
+            return serializers.Project_user
+        else:
+            return serializers.Project_project
+        
     def get_queryset(self):
-        return models.Project.objects.filter(user_id = self.kwargs['user_id'])
-
-class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+        self.query_validation()
+        return models.Project.objects.filter(user_id = self.request.POST.get("user_id"))
+    
+    def post(self, request, *args, **kwargs):
+        self.query_validation()
+        return self.list(request, *args, **kwargs)
+    
+class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Project_DELETE_todo
         SECURITY LEVEL d2
@@ -191,9 +212,10 @@ class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, gener
     """
 
     serializer_class = serializers.Project_all
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         # project_name, user_id check
         queryset = models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
                                                  & Q(user_id = self.request.POST.get('user_id')))
@@ -215,7 +237,7 @@ class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, gener
         self.get_queryset().delete()
         return response
     
-class Project_DELETE_project(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+class Project_DELETE_project(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Project_DELETE_project
         SECURITY LEVEL d2
@@ -229,9 +251,10 @@ class Project_DELETE_project(mixins.ListModelMixin, mixins.DestroyModelMixin, ge
     """
 
     serializer_class = serializers.Project_project
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         if self.get_queryset().exists() == False:
             raise exceptions.ValidationError('project_name must already exists in the db with the corresponding user_id.')
 
@@ -251,7 +274,7 @@ class Project_DELETE_project(mixins.ListModelMixin, mixins.DestroyModelMixin, ge
 
 #region STAMP API
 
-class Stamp_CREATE_stamp(generics.CreateAPIView):
+class Stamp_CREATE_stamp(generics.CreateAPIView, IsOwner_permission_Mixin):
     """
     # Stamp_CREATE_stamp
         SECURITY LEVEL c2
@@ -266,10 +289,10 @@ class Stamp_CREATE_stamp(generics.CreateAPIView):
 
 
     serializer_class = serializers.Stamp_stamp
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
-
+        super().query_validation()
         if self.get_queryset().exists() == True:
             raise exceptions.ValidationError('cannot add stamp that already has been exist.')
         
@@ -282,7 +305,7 @@ class Stamp_CREATE_stamp(generics.CreateAPIView):
         self.query_validation()
         return super().create(request, *args, **kwargs)
     
-class Stamp_CREATE_subelement(generics.CreateAPIView):
+class Stamp_CREATE_subelement(generics.CreateAPIView, IsOwner_permission_Mixin):
     """
     # Stamp_CREATE_subelement
         SECURITY LEVEL c2
@@ -299,9 +322,10 @@ class Stamp_CREATE_subelement(generics.CreateAPIView):
     """
 
     serializer_class = serializers.Stamp_subelement_argsGet
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         queryset = models.Stamp.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
                                                  & Q(stamp_name = self.request.POST.get('stamp_name')))
         if queryset.exists() == False:
@@ -365,8 +389,7 @@ class Stamp_CREATE_subelement(generics.CreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-
-class Stamp_RETRIEVE_user(generics.ListAPIView):
+class Stamp_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Project_RETRIEVE_user
         SECURITY LEVEL r2
@@ -376,14 +399,24 @@ class Stamp_RETRIEVE_user(generics.ListAPIView):
         - user_id
     """
 
-    permission_classes = []
-    lookup_field = 'user_id'
-    serializer_class = serializers.Stamp_stamp
+    serializer_class = serializers.Stamp_user
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self):
+        if len(self.request.POST) == 0:
+            return serializers.Stamp_user
+        else:
+            return serializers.Stamp_stamp
+        
     def get_queryset(self):
-        return models.Stamp.objects.filter(user_id = self.kwargs['user_id'])
-
-class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView):
+        self.query_validation()
+        return models.Stamp.objects.filter(user_id = self.request.POST.get("user_id"))
+    
+    def post(self, request, *args, **kwargs):
+        self.query_validation()
+        return self.list(request, *args, **kwargs)
+    
+class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Project_RETRIEVE_project
         SECURITY LEVEL r2
@@ -394,7 +427,7 @@ class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView):
         - stamp_name
     """
 
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if len(self.request.POST) == 0:
@@ -403,6 +436,7 @@ class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView):
             return serializers.Stamp_subelement
         
     def query_validation(self):
+        super().query_validation()
         if len(self.request.POST) == 0:
             return models.Stamp.objects.none()
         
@@ -421,7 +455,7 @@ class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView):
         self.query_validation()
         return self.list(request, *args, **kwargs)
 
-class Stamp_RETRIEVE_subelement(generics.ListAPIView):
+class Stamp_RETRIEVE_subelement(generics.ListAPIView, IsOwner_permission_Mixin):
     """
     # Stamp_RETRIEVE_subelement
         SECURITY LEVEL r2
@@ -434,7 +468,7 @@ class Stamp_RETRIEVE_subelement(generics.ListAPIView):
     """
 
     serializer_class = serializers.Stamp_subelement_retrieve
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if len(self.request.POST) == 0:
@@ -443,6 +477,7 @@ class Stamp_RETRIEVE_subelement(generics.ListAPIView):
             return serializers.Stamp_all
         
     def query_validation(self):
+        super().query_validation()
         if len(self.request.POST) == 0:
             return models.Stamp.objects.none()
         
@@ -463,7 +498,7 @@ class Stamp_RETRIEVE_subelement(generics.ListAPIView):
         self.query_validation()
         return self.list(request, *args, **kwargs)
 
-class Stamp_DELETE_stamp(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+class Stamp_DELETE_stamp(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Stamp_DELETE_stamp
         SECURITY LEVEL d2
@@ -478,9 +513,10 @@ class Stamp_DELETE_stamp(mixins.ListModelMixin, mixins.DestroyModelMixin, generi
     """
 
     serializer_class = serializers.Stamp_stamp
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         if self.get_queryset().exists() == False:
             raise exceptions.ValidationError('stamp_name must already exists in the db with the corresponding user_id.')
 
@@ -493,7 +529,7 @@ class Stamp_DELETE_stamp(mixins.ListModelMixin, mixins.DestroyModelMixin, generi
         self.get_queryset().delete()
         return response
     
-class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Stamp_DELETE_subelement
         SECURITY LEVEL d2
@@ -508,9 +544,10 @@ class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, g
     """
 
     serializer_class = serializers.Stamp_subelement_retrieve
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         # validate existance of stamp_name, user_id
         query = models.Stamp.objects.filter(Q(stamp_name=self.request.POST.get('stamp_name')) 
                                                  & Q(user_id = self.request.POST.get('user_id')))
@@ -530,47 +567,12 @@ class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, g
         self.get_queryset().delete()
         return response
 
-class Stamp_DELETE_arg(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
-    """
-    # Stamp_DELETE_arg
-        SECURITY LEVEL d2
-        - delete the arg in a project_name.
-    POST params
-        - user_id
-        - project_name
-        - todo_name
-        - arg_name
-    database changes
-        - targeted arg will be deleted.
-    """
-
-    serializer_class = serializers.Stamp_arg
-    permission_classes = []
-
-    def query_validation(self):
-        # validate existance of stamp_name, user_id, arg_name
-        if self.get_queryset().exists() == False:
-            raise exceptions.ValidationError('stamp_name must already exists in the db with the corresponding user_id.')
-        # null check for arg_name
-        if self.request.POST.get('arg_name') == '' or self.request.POST.get('arg_name') == None:
-            raise exceptions.ValidationError('target arg_name cannot be null or blank')
-
-    def get_queryset(self):
-        return models.Stamp.objects.filter(Q(stamp_name=self.request.POST.get('stamp_name')) 
-                                                 & Q(user_id = self.request.POST.get('user_id'))
-                                                 & Q(arg_name = self.request.POST.get('arg_name')))
-    def post(self, request, *args, **kwargs):
-        self.query_validation()
-        response = self.list(request, *args, **kwargs)
-        self.get_queryset().delete()
-        return response
-    
 #endregion
 
 
 #region MAIN_API
 
-class Main_CREATE_main(generics.CreateAPIView):
+class Main_CREATE_main(generics.CreateAPIView, IsOwner_permission_Mixin):
     """
     # Main_CREATE_main
         SECURITY LEVEL c2
@@ -585,11 +587,12 @@ class Main_CREATE_main(generics.CreateAPIView):
         - without arg.
     """   
 
-    serializer_class = serializers.Main_main
-    permission_classes = []
+    serializer_class = serializers.Main_main_argsGet
+    permission_classes = [permissions.IsAuthenticated]
 
 
     def query_validation(self):
+        super().query_validation()
         # validation of existance
         if self.get_queryset().exists() == True:
             raise exceptions.ValidationError('cannot add recode that already has been exist.')
@@ -610,46 +613,51 @@ class Main_CREATE_main(generics.CreateAPIView):
         
     def create(self, request, *args, **kwargs):
         self.query_validation()
-        return super().create(request, *args, **kwargs)
-    
-class Main_CREATE_arg(generics.CreateAPIView):
-    """
-    # Main_CREATE_main
-        SECURITY LEVEL c2
-        - create an subvals to main recode.
 
-    POST params
-        - user_id : target user's id. 
-        - stamp_id : target stamp_id.
+        user_id = self.request.POST.get('user_id')
+        stamp_id = self.request.POST.get('stamp_id')
+        date = self.request.POST.get('date')
 
-    database changes
-        - model Main will get new row of recode.
-        - without arg.
-    """   
+        # make subvar dict
+        stamp_stamp = models.Stamp.objects.get(id = int(stamp_id))
+        stamp_name = getattr(stamp_stamp, "stamp_name")
+        stamp_subelements = models.Stamp.objects.filter( Q(user_id = int(user_id))
+                                                        & Q(stamp_name = stamp_name)
+                                                        & ~Q(defFunc_name = '')
+                                                        & Q(arg_name = ''))
+        subvar_dict = None
+        for subelement in stamp_subelements:
+            subelement_name = getattr(subelement, 'subelement_name')
+            if getattr(subelement, 'defFunc_name') == 'discrete_point':
+                main_vals = self.request.POST.get("main_vals").split(' ')
+                queryset = models.Stamp.objects.filter( Q(user_id = int(user_id))
+                                                        & Q(stamp_name = stamp_name)
+                                                        & Q(subelement_name = subelement_name)
+                                                        & ~Q(arg_name = ''))
+                subvar_dict = sub.Discrete_point.subvar_set(queryset, *main_vals)
+            else :
+                raise exceptions.ValidationError('wrong name : defFunc_name ')
 
-    serializer_class = serializers.Main_all
-    permission_classes = []
+        for k,v in subvar_dict.items():
+            arg_name = k
+            arg_val = v
+            models.Main.objects.create(user_id = models.User.objects.get(id=int(user_id)), 
+                                        stamp_id = models.Stamp.objects.get(id=int(stamp_id)),
+                                        date = date,
+                                        arg_name = arg_name, 
+                                        arg_val = arg_val,)
 
-
-    def query_validation(self):
-        # validation of existance
-        queryset = models.Main.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
-                                                 & Q(stamp_id = self.request.POST.get('stamp_id'))
-                                                 & Q(date = self.request.POST.get('date')))
-        if queryset.exists() == False:
-            raise exceptions.ValidationError('can add arg only if user+stamp already has been exist.')
-
-    def get_queryset(self):
-        queryset = models.Main.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
-                                                 & Q(stamp_id = self.request.POST.get('stamp_id'))
-                                                 & Q(date = self.request.POST.get('date')))
-        return queryset
+        models.Main.objects.create(user_id = models.User.objects.get(id=int(user_id)), 
+                                    stamp_id = models.Stamp.objects.get(id=int(stamp_id)),
+                                    date = date)
         
-    def create(self, request, *args, **kwargs):
-        self.query_validation()
-        return super().create(request, *args, **kwargs)
-    
-class Main_DELETE_main(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+        # make response then return
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+class Main_DELETE_main(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
     """
     # Main_DELETE_main
         SECURITY LEVEL d2
@@ -664,9 +672,10 @@ class Main_DELETE_main(mixins.ListModelMixin, mixins.DestroyModelMixin, generics
     """
 
     serializer_class = serializers.Main_main
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def query_validation(self):
+        super().query_validation()
         # project_name, user_id check
         if self.get_queryset().exists() == False:
             raise exceptions.ValidationError('project_name must already exists in the db with the corresponding user_id.')
@@ -679,45 +688,6 @@ class Main_DELETE_main(mixins.ListModelMixin, mixins.DestroyModelMixin, generics
     def post(self, request, *args, **kwargs):
         self.query_validation()
         response = self.list(request, *args, **kwargs)
-        self.get_queryset().delete()
-        return response
-
-class Main_DELETE_arg(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
-    """
-    # Main_DELETE_arg
-        SECURITY LEVEL d2
-        - delete the specific arg in a db.
-        - only search for target stamp + date
-    POST params
-        - user_id
-        - stamp_id
-        - date
-        - arg_name
-    database changes
-        - targeted arg will be deleted.
-    """
-
-    serializer_class = serializers.Main_arg
-    permission_classes = []
-
-    def query_validation(self):
-        # project_name, user_id check
-        if self.get_queryset().exists() == False:
-            raise exceptions.ValidationError('stamp+user must already exists in the db.')
-        # arg null check.
-        if self.request.POST.get('arg_name') == '' or self.request.POST.get('arg_name') == None:
-            raise exceptions.ValidationError('target arg_name cannot be null or blank')
-
-    def get_queryset(self):
-        return models.Main.objects.filter(Q(user_id=self.request.POST.get('user_id')) 
-                                                 & Q(stamp_id = self.request.POST.get('stamp_id'))
-                                                 & Q(date = self.request.POST.get('date'))
-                                                 & Q(arg_name = self.request.POST.get('arg_name')))
-
-    def post(self, request, *args, **kwargs):
-        self.query_validation()
-        response = self.list(request, *args, **kwargs)
-        self.serializer_class = serializers.Main_all
         self.get_queryset().delete()
         return response
 
