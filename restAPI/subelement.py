@@ -23,8 +23,18 @@ class Discrete_point():
         acc_lbound (int) : accumulated value's lowerbound.
         acc_ubound (int) : accumulated value's upperbound.
     """
+
+    # below is the type and args for set subelements, set subvars. 
+
+    # selective for null OR valued params.
+    # forced for MUST valued params.
+    # private for MUST null params.
+
+
+    # subelement_type is the input values for creation of stamp/subelement -> arg_names, arg_vals
+    # all the values are selective.
     subelement_type = {
-            'name': str,
+            'name': str, 
             'lowerbound' : int,
             'upperbound' : int,
             'is_accumulated' : bool,
@@ -32,9 +42,10 @@ class Discrete_point():
             'acc_ubound' : int,
         }
     
+    # subvar_type is the input values for creation of main -> main_vals.
     subvar_type = {
-        'value' : int,
-        'accumulate' : int,
+        'value' : int, # forced 
+        'accumulate' : int, # private
     }
 
     @classmethod

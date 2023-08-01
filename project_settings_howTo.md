@@ -18,7 +18,7 @@
         - manage.py runserver
     5. (for docker building) in ./ ,
         - docker build -t ...
-
+ 
 
 # when you want to test sth in local
     1. after adjusting codes, 
@@ -27,7 +27,7 @@
         - run "commit docker". it will automatically generate the 'ghcr.io/enzoescipy/sticker_grasser:pending' tagged image in docker.
         - open bash, and run "docker run -d -p 8000:8000 ghcr.io/enzoescipy/sticker_grasser:pending".
         - test sth you want.
-    2. in closure,
+    2. if you wan to close the server,
         - check if docker desktop is running.
         - run "docker ps -a"
         - kill the running container like "docker kill <container_hash>"

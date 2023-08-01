@@ -19,6 +19,21 @@ class User_createSafe(serializers.ModelSerializer):
         user.save()
         return user
 
+class User_updateSafe(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'email',
+            'password',
+        )
+        model = models.User
+    
+    def update(self, instance, validated_data):
+        instance.email = validated_data["email"]
+        instance.set_password(validated_data["password"])
+        instance.save()
+
+        return instance
+
 #endregion
 
 
@@ -132,6 +147,24 @@ class Stamp_user(serializers.ModelSerializer):
             'user_id',
         )
         model = models.Stamp
+
+class Stamp_update_stamp(serializers.Serializer):
+    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
+
+    stamp_name = serializers.CharField()
+    stamp_rename = serializers.CharField()
+
+
+class Stamp_update_subelement(serializers.Serializer):
+    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
+
+    stamp_name = serializers.CharField()
+    subelement_name = serializers.CharField()
+    subelement_rename = serializers.CharField()
+    defFunc_rename = serializers.CharField()
+
+    arg_names = serializers.CharField()
+    arg_vals = serializers.CharField()
 
 #endregion
 

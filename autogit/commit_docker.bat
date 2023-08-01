@@ -1,1 +1,1 @@
-docker build -t ghcr.io/scika/sticker_grasser:pending .
+docker build -t ghcr.io/enzoescipy/sticker_grasser:pending .

@@ -24,6 +24,8 @@ security level :
     rwdc3 -> only the authorized user can [read/write/delete/create] these value freely.
     rwdc4 -> all the un-authorized users can [read/write/delete/create] these value. 
 """
+
+# WARNING : you MUST override the get_queryset method and execute the query_validation manually.
 class IsOwner_permission_Mixin:
     def query_validation(self):
         # check if owner of instance is matched the caller of this view.
@@ -36,9 +38,11 @@ class IsOwner_permission_Mixin:
             if superuser != True:
                 raise exceptions.ValidationError("current logged in user have not owned licence for this request.")
 
+
+
 #region USER API
 
-class User_CREATE_unauthorized(generics.CreateAPIView):
+class User_CREATE(generics.CreateAPIView):
     """
     # User_CREATE
         SECURITY LEVEL c4
@@ -61,6 +65,27 @@ class User_CREATE_unauthorized(generics.CreateAPIView):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response({}, status=status.HTTP_201_CREATED, headers=headers)
+
+class User_UPDATE(generics.UpdateAPIView, IsOwner_permission_Mixin):
+    """
+    # User_UPDATE
+        SECURITY LEVEL dc2
+        - update an user profile
+        - targeted user is currently logged in user.
+    POST params
+        - Email
+        - password
+    database changes
+        - logged in user will be updated.
+    """
+    serializer_class = serializers.User_updateSafe
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.serializer_class(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({}, status=status.HTTP_200_OK)
 
 #endregion
 
@@ -316,6 +341,8 @@ class Stamp_CREATE_subelement(generics.CreateAPIView, IsOwner_permission_Mixin):
         - stamp_name : stamp_name already exists.
         - subelement_name : subelement_name that will be created
         - defFunc_name : defFunc_name that will be created
+        - arg_names -> args for defFunc
+        - arg_vals -> args for defFunc
     database changes
         - model Stamp will get new row of Stamp.
         - row will created with subelement_name=<subelement_name>, defFunc_name=<defFunc_name>
@@ -567,6 +594,185 @@ class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, g
         self.get_queryset().delete()
         return response
 
+class Stamp_UPDATE_stamp(generics.CreateAPIView, IsOwner_permission_Mixin):
+    """
+    # Stamp_UPDATE_stamp
+        SECURITY LEVEL c2
+        - update the stamp, with the target user_id
+        - if X_rename not specified and value is None, then update will not be performed.
+    POST params
+        - user_id -> select
+        - stamp_name -> select
+        - stamp_rename -> update
+    """
+
+    serializer_class = serializers.Stamp_update_stamp
+    permission_classes = [permissions.IsAuthenticated]
+
+    def query_validation(self):
+        super().query_validation()
+
+        # select target exisistance
+        queryset = models.Stamp.objects.filter(user_id = self.request.POST.get("user_id"),
+                                           stamp_name = self.request.POST.get("stamp_name"))
+        if queryset.exists() == False:
+            raise exceptions.ValidationError('cannot select stamp that was not have been exist.')
+        
+        # update target exisistance
+        queryset = models.Stamp.objects.filter(user_id = self.request.POST.get("user_id"),
+                                           stamp_name = self.request.POST.get("stamp_rename"))
+        if queryset.exists() == True:
+            raise exceptions.ValidationError('cannot update stamp to the name that already used by other stamp.')
+    
+
+    def get_queryset(self):
+        self.query_validation()
+        return models.Stamp.objects.filter(user_id = self.request.POST.get("user_id"),
+                                           stamp_name = self.request.POST.get("stamp_name"))
+    
+    def post(self, request, *args, **kwargs):
+        # update model
+        stamp_rename = self.request.POST.get("stamp_rename")
+        if stamp_rename == "" or stamp_rename == None: # if rename is null then replace to orig
+            stamp_rename = self.request.POST.get("stamp_name")
+        self.get_queryset().update(stamp_name=self.request.POST.get("stamp_rename"))
+
+        # make response then return
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED, headers=headers)
+    
+class Stamp_UPDATE_subelement(generics.CreateAPIView, IsOwner_permission_Mixin):
+    """
+    # Stamp_UPDATE_subelement
+        SECURITY LEVEL c2
+        - update an subelement on the existing stamp
+        - if named stamp_name is not already exist in db, reject request. 
+    POST params
+        - user_id -> select
+        - stamp_name -> select
+        - subelement_name -> select
+        - subelement_rename -> update
+        - defFunc_rename -> update
+        - arg_names -> update
+        - arg_vals -> update
+    """
+
+    serializer_class = serializers.Stamp_update_subelement
+    permission_classes = [permissions.IsAuthenticated]
+
+    def query_validation(self):
+        super().query_validation()
+        user_id = self.request.POST.get("user_id")
+        stamp_name = self.request.POST.get("stamp_name")
+
+        # select target exisistance
+        queryset = models.Stamp.objects.filter(user_id = user_id,
+                                           stamp_name = stamp_name)
+        if queryset.exists() == False:
+            raise exceptions.ValidationError('cannot select stamp that was not have been exist.')
+        
+        # update target exisistance
+        subelement_rename = self.request.POST.get("subelement_rename")
+        if not(subelement_rename == "" or subelement_rename == None):
+            queryset = models.Stamp.objects.filter(Q(user_id = user_id)
+                                            & Q(stamp_name = stamp_name)
+                                            & Q(subelement_name = subelement_rename)
+                                            & Q(arg_name = ""))
+            if queryset.exists() == True:
+                raise exceptions.ValidationError('cannot update subelement_rename to the name that already used by other subelements.')
+        
+    def get_queryset(self):
+        return models.Stamp.objects.filter(Q(user_id=self.request.POST.get('user_id'))
+                                            & Q(stamp_name = self.request.POST.get('stamp_name'))
+                                            & Q(subelement_name = self.request.POST.get('subelement_name')))
+
+    def create(self, request, *args, **kwargs):
+        self.query_validation()
+
+        user_id = self.request.POST.get('user_id')
+        stamp_name = self.request.POST.get('stamp_name')
+        subelement_name = self.request.POST.get('subelement_name')
+        subelement_rename = self.request.POST.get('subelement_rename')
+        if subelement_rename == None or subelement_rename == "":
+            subelement_rename = subelement_name
+        defFunc_rename = self.request.POST.get('defFunc_rename')
+        
+        if defFunc_rename == None or defFunc_rename == "": # for defFunc_rename NULL case, just rename all subelement and its args.
+            if subelement_rename == subelement_name:
+                pass
+            else:
+                queryset = models.Stamp.objects.filter(user_id=models.User.objects.get(id=int(user_id)), 
+                                                stamp_name=stamp_name, 
+                                                subelement_name=subelement_name)
+                queryset.update(subelement_name = subelement_rename)
+        else: # for usuall case, delete and re-creation method is applied.
+
+
+            # arg_names, arg_vals split with blank
+            arg_names = self.request.POST.get("arg_names")
+            arg_vals = self.request.POST.get("arg_vals")
+            arg_names = arg_names.split(' ')
+            arg_vals = arg_vals.split(' ')
+
+            # args validation for len()
+            if len(arg_names) != len(arg_vals):
+                raise exceptions.ValidationError('arg_names and arg_vals must have the same length of elements as sep=\' \'.')
+
+            # make subelement set dict
+            set_dict = None
+            if defFunc_rename == "discrete_point" :
+                args_dict = dict(zip(arg_names, arg_vals))
+                set_dict = sub.Discrete_point.subelement_set(**args_dict)
+            else :
+                raise exceptions.ValidationError('wrong name : defFunc_name ')
+
+
+            # first delete the old arg param
+            targetUser = models.User.objects.get(id=int(user_id))
+
+            queryset = models.Stamp.objects.filter(user_id=targetUser, 
+                                            stamp_name=stamp_name, 
+                                            subelement_name=subelement_name)
+            queryset.delete()
+
+            # update arg_rows in models.Stamp
+            for k,v in set_dict.items():
+                arg_name = k
+                arg_val = v
+                models.Stamp.objects.create(user_id=targetUser, 
+                                            stamp_name=stamp_name, 
+                                            subelement_name=subelement_rename,
+                                            defFunc_name = defFunc_rename,
+                                            arg_name = arg_name,
+                                            arg_val = arg_val)
+
+            models.Stamp.objects.create(user_id=targetUser, 
+                                            stamp_name=stamp_name, 
+                                            subelement_name=subelement_rename,
+                                            defFunc_name = defFunc_rename) # create subelement descriptional row
+
+            # find all the recode from models.Main which has stamp with user, and tag UNTRUSTED=true.
+            targetStamp = models.Stamp.objects.get(Q(stamp_name = stamp_name)
+                                                & Q(subelement_name = ""))
+            queryset = models.Main.objects.filter(user_id = targetUser,
+                                                  stamp_id = targetStamp,
+                                                  arg_name = "")
+            for obj in queryset:
+                date = getattr(obj, "date")
+                models.Main.objects.create(user_id = targetUser,
+                                        stamp_id = targetStamp,
+                                        date = date,
+                                        arg_name = "untrusted",
+                                        arg_val = True)
+
+
+        # make response then return
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=False)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED, headers=headers)
 #endregion
 
 
@@ -582,6 +788,7 @@ class Main_CREATE_main(generics.CreateAPIView, IsOwner_permission_Mixin):
         - user_id : specific user's id. 
         - stamp_id : specific stamp_id.
         - date : date hope to put in the recode
+        - main_vals : vals related to subelements. see the subelement.py 
     database changes
         - model Main will get new row of recode.
         - without arg.
