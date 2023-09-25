@@ -49,3 +49,12 @@
         - WARNING : do not download :latest tag. it can be not the latest.
     - And the autogit.bat "push git docker" will first do git commit -> git push -> and then docker push.
 
+# when you want to re-build the cloud server for this project
+    - make instance by non-arm process, and centos 7.
+    - clean install the docker
+        - yum update
+        - yum install yum-utils
+        - yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        - yum install docker-ce docker-ce-cli containerd.io
+    - start docker daemon
+        - systemctl start docker (you have to run this command everytime you reboot your instance)
