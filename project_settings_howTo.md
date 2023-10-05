@@ -32,6 +32,10 @@
         - run "docker ps -a"
         - kill the running container like "docker kill <container_hash>"
         - remove the dead container like "docker rm <container_hash>"
+    3. if you adjust sth in sticker_grasser_react,
+        - when for just test the react staticals (not api), goto folder and then run "npm start".
+        - when for run local server test, goto folder then run "npm run build".
+        - if no build, changes will not be settled to the production.
 
 # when you want to commit sth to git repo
     - execute autogit.bat
@@ -58,3 +62,4 @@
         - yum install docker-ce docker-ce-cli containerd.io
     - start docker daemon
         - systemctl start docker (you have to run this command everytime you reboot your instance)
+

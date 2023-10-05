@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-
+from corsheaders.defaults import default_headers
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +25,12 @@ SECRET_KEY = 'django-insecure-k#@m2l8e2exp=+*9ed82@ya==04fu)@&b=02@@=*s8^zmq063n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['129.154.214.178','localhost','127.0.0.1','172.30.1.6']
+ALLOWED_HOSTS = [
+    '129.154.214.178',
+    # 'localhost', ## do not access to localhost.
+    '127.0.0.1',   ## instead, access through the 127.0.0.1 
+    '172.30.1.6'
+    ]
 
 
 # Application definition
@@ -39,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "restAPI",
     "rest_framework",
+    "rest_framework.authtoken"
     "corsheaders",
 ]
 
@@ -60,16 +66,52 @@ REST_FRAMEWORK = {
     ]
 }
 
-
-CORS_ORIGIN_WHITELIST = [
+CORS_ALLOWED_ORIGINS  = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
+CORS_ORIGIN_WHITELIST   = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
 ]
+
+# CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+CSRF_HEADER_NAME = 'CSRF_COOKIE'
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = (
+    'access-control-allow-credentials',
+    'access-control-allow-origin',
+    'access-control-request-method',
+    'access-control-request-headers',
+    'accept',
+    'accept-encoding',
+    'accept-language',
+    'authorization',
+    'connection',
+    'content-type',
+    'dnt',
+    'credentials',
+    'host',
+    'origin',
+    'user-agent',
+    'X-CSRFToken',
+    'csrftoken',
+    'x-requested-with',
+)
 
 ROOT_URLCONF = 'sticker_grasser_main.urls'
 
