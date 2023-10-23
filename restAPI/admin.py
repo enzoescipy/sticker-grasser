@@ -2,7 +2,20 @@ from django.contrib import admin
 
 from . import models
 
-admin.site.register(models.User)
-admin.site.register(models.Project)
-admin.site.register(models.Stamp)
-admin.site.register(models.Main)
+
+# User model
+admin.site.register(model_or_iterable=models.User)
+
+# Project models
+admin.site.register(model_or_iterable=models.Project)
+admin.site.register(model_or_iterable=models.Todo)
+
+# Stamp models
+admin.site.register(model_or_iterable=models.Stamp)
+admin.site.register(model_or_iterable=models.DefFunc)
+admin.site.register(model_or_iterable=models.FuncArg)
+
+# History models
+admin.site.register(model_or_iterable=models.UserTodoStampOwnedHistory)
+admin.site.register(model_or_iterable=models.History)
+admin.site.register(model_or_iterable=models.HistoryArg)

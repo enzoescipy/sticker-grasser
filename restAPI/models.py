@@ -22,6 +22,8 @@ Terminology
     developer has the korean lang. terminology in his notion doc.
 """
 
+field_length_dict = {'email' : 100,'name' : 50, 'arg_name' : 50, 'arg_value' : 50}
+
 
 #region User model
 
@@ -62,7 +64,7 @@ class User(AbstractUser):
     """
     AbstractUser model, but email added.
     """
-    email = models.EmailField(max_length=254)
+    email = models.EmailField(max_length=field_length_dict['email'], unique=True)
 
     # id (int) : PK
     # username (char) : user id
@@ -104,10 +106,10 @@ class Project(models.Model):
 
     """
     user_fkey = models.ForeignKey('User', related_name='project_user', on_delete=models.CASCADE, db_column='user_fkey')
-    project_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
+    project_name = models.CharField(max_length=field_length_dict['name'], unique=False, null=False, blank=False)
 
     def __str__(self):
-        return f"{self.user_id}:{self.project_name}"
+        return f"{self.user_fkey}:{self.project_name}"
 
 class Todo(models.Model):
     """
@@ -120,7 +122,7 @@ class Todo(models.Model):
         - todo_name (UNIQUE by each Project)
     """
     project_fkey = models.ForeignKey('Project', related_name='todo_project', on_delete=models.CASCADE, db_column='project_fkey')
-    todo_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
+    todo_name = models.CharField(max_length=field_length_dict['name'], unique=False, null=False, blank=False)
 
     def __str__(self):
         return f"{self.project_fkey}:{self.todo_name}"
@@ -148,7 +150,7 @@ class Stamp(models.Model):
         - stamp_name (UNIQUE by each User)
     """
     user_fkey = models.ForeignKey('User', related_name='stamp_user', on_delete=models.CASCADE, db_column='user_fkey')
-    stamp_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
+    stamp_name = models.CharField(max_length=field_length_dict['name'], unique=False, null=False, blank=False)
 
     def __str__(self):
         return f"{self.user_fkey}:{self.stamp_name}"
@@ -169,7 +171,7 @@ class DefFunc(models.Model):
     - defFunc_name (CASE)
     """
     stamp_fkey = models.ForeignKey('Stamp', related_name='defFunc_stamp', on_delete=models.CASCADE, db_column='stamp_fkey')
-    defFunc_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
+    defFunc_name = models.CharField(max_length=field_length_dict['name'], unique=False, null=False, blank=False)
 
     def __str__(self):
         return f"{self.stamp_fkey}:{self.defFunc_name}"
@@ -186,13 +188,13 @@ class FuncArg(models.Model):
 
     Structure:
         - pkey
-        - DefFunc model fkey
+        - DefFunc model fkey (CASCADE)
         - arg_name (UNIQUE while DefFunc)
         - arg_value
     """
     stamp_fkey = models.ForeignKey('DefFunc', related_name='funcArg_defFunc', on_delete=models.CASCADE, db_column='defFunc_fkey')
-    arg_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
-    arg_value = models.CharField(max_length=254, unique=False, null=False, blank=False)
+    arg_name = models.CharField(max_length=field_length_dict['arg_name'], unique=False, null=False, blank=False)
+    arg_value = models.CharField(max_length=field_length_dict['arg_value'], unique=False, null=False, blank=False)
 
     def __str__(self):
         return f"{self.stamp_fkey}:{self.arg_name}:{self.arg_value} "
@@ -218,10 +220,10 @@ class UserTodoStampOwnedHistory(models.Model):
 
     Structure:
         - pkey
-        - User model fkey
-        - Stamp model fkey
-        - Todo model fkey
-        - History model fkey
+        - User model fkey (CASCADE)
+        - Stamp model fkey (DO_NOTHING)
+        - Todo model fkey (DO_NOTHING)
+        - History model fkey (CASCADE)
     """
     user_fkey = models.ForeignKey('User', related_name='userTodoStampOwnedHistory_user', on_delete=models.CASCADE, db_column='user_fkey')
     stamp_fkey = models.ForeignKey('Stamp', related_name='userTodoStampOwnedHistory_stamp', on_delete=models.DO_NOTHING, db_column='stamp_fkey')
@@ -254,15 +256,15 @@ class HistoryArg(models.Model):
 
     Structure:
         - pkey
-        - History model fkey
+        - History model fkey (CASCADE)
         - arg_name (UNIQUE while History)
         - arg_val
 
     """
 
-    history_fkey = models.ForeignKey('History', related_name='userTodoStampOwnedHistory_history', on_delete=models.CASCADE, db_column='history_fkey')
-    arg_name = models.CharField(max_length=254, unique=False, null=False, blank=False)
-    arg_value = models.CharField(max_length=254, unique=False, null=False, blank=False)
+    history_fkey = models.ForeignKey('History', related_name='historgArg_history', on_delete=models.CASCADE, db_column='history_fkey')
+    arg_name = models.CharField(max_length=field_length_dict['arg_name'], unique=False, null=False, blank=False)
+    arg_value = models.CharField(max_length=field_length_dict['arg_value'], unique=False, null=False, blank=False)
     
     def __str__(self):
         return f"{self.history_fkey}:{self.arg_name}:{self.arg_value}"

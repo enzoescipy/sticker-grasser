@@ -2,6 +2,9 @@ from rest_framework import serializers
 from . import models 
 
 
+user_fkey_str = 'user_fkey'
+
+
 #region USER
 class User_createSafe(serializers.ModelSerializer):
     class Meta:
@@ -34,179 +37,121 @@ class User_updateSafe(serializers.ModelSerializer):
 
         return instance
 
+class User_emailMixin(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'email',
+        )
+        model = models.User
+
 #endregion
 
 
 #region PROJECT
 
-class Project_all(serializers.ModelSerializer):
+class Project(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'user_id',
-            'project_name',
-            'todo_name'
-        )
-        model = models.Project
-
-class Project_project(serializers.ModelSerializer):
-    todo_name = ''
-    class Meta:
-        fields = (
-            'user_id',
+            'user_fkey',
             'project_name',
         )
         model = models.Project
 
-class Project_user(serializers.ModelSerializer):
-    todo_name = ''
+
+# class Project_set(serializers.Serializer):
+#     # user_fkey = serializers.PrimaryKeyRelatedField(queryset = models.User.objects.all)
+#     email = serializers.CharField(max_length=models.field_length_dict['email'])
+#     project_name = serializers.CharField(max_length=models.field_length_dict['name'])
+
+# class Project_user(serializers.ModelSerializer):
+#     project_name = ''
+#     class Meta:
+#         fields = (
+#             'user_fkey',
+#         )
+#         model = models.Project
+
+class Todo_get(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'user_id',
+            'project_fkey',
+            'todo_name',
         )
-        model = models.Project
+        model = models.Todo
+
 
 #endregion
 
 #region  STAMP
 
-class Stamp_all(serializers.ModelSerializer):
+class Stamp(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'user_id',
+            'user_fkey',
             'stamp_name',
-            'subelement_name',
-            'defFunc_name',
-            'arg_name',
-            'arg_val',
         )
         model = models.Stamp
 
-class Stamp_arg(serializers.ModelSerializer):
+class DefFunc(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'user_id',
-            'stamp_name',
-            'subelement_name',
-            'arg_name',
-        )
-        model = models.Stamp
-
-class Stamp_subelement_argsGet(serializers.Serializer):
-    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
-
-    stamp_name = serializers.CharField()
-    subelement_name = serializers.CharField()
-    defFunc_name = serializers.CharField()
-
-    arg_names = serializers.CharField()
-    arg_vals = serializers.CharField()
-
-class Stamp_subelement(serializers.ModelSerializer):
-    class Meta:
-        arg_name = ''
-        arg_val = ''
-        fields = (
-            'user_id',
-            'stamp_name',
-            'subelement_name',
+            'stamp_fkey',
             'defFunc_name',
         )
-        model = models.Stamp
+        model = models.DefFunc
 
-class Stamp_subelement_retrieve(serializers.ModelSerializer):
+class FuncArg(serializers.ModelSerializer):
     class Meta:
-        arg_name = ''
-        arg_val = ''
         fields = (
-            'user_id',
-            'stamp_name',
-            'subelement_name',
-
+            'stamp_fkey',
+            'arg_name',
+            'arg_value',
         )
-        model = models.Stamp
-
-class Stamp_stamp(serializers.ModelSerializer):
-    class Meta:
-        arg_name = ''
-        arg_val = ''
-        subelement_name = ''
-        defFunc_name = ''
-        fields = (
-            'user_id',
-            'stamp_name',
-        )
-        model = models.Stamp
-
-class Stamp_user(serializers.ModelSerializer):
-    class Meta:
-        arg_name = ''
-        arg_val = ''
-        subelement_name = ''
-        defFunc_name = ''
-        fields = (
-            'user_id',
-        )
-        model = models.Stamp
-
-class Stamp_update_stamp(serializers.Serializer):
-    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
-
-    stamp_name = serializers.CharField()
-    stamp_rename = serializers.CharField()
+        model = models.FuncArg
 
 
-class Stamp_update_subelement(serializers.Serializer):
-    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
+# class Stamp_subelement_argsGet(serializers.Serializer):
+#     user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all()) 
 
-    stamp_name = serializers.CharField()
-    subelement_name = serializers.CharField()
-    subelement_rename = serializers.CharField()
-    defFunc_rename = serializers.CharField()
+#     stamp_name = serializers.CharField()
+#     subelement_name = serializers.CharField()
+#     defFunc_name = serializers.CharField()
 
-    arg_names = serializers.CharField()
-    arg_vals = serializers.CharField()
+#     arg_names = serializers.CharField()
+#     arg_vals = serializers.CharField()
+
+# 
 
 #endregion
 
 
 # region MAIN
 
-class Main_all(serializers.ModelSerializer):
+class UserTodoStampOwnedHistory(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'user_id',
-            'stamp_id',
+            'user_fkey',
+            'stamp_fkey',
+            'todo_fkey',
+            'history_fkey',
+        )
+        model = models.UserTodoStampOwnedHistory
+
+class History(serializers.ModelSerializer):
+    class Meta:
+        fields = (
             'date',
+        )
+        model = models.History
+
+class HistoryArg(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'history_fkey',
             'arg_name',
-            'arg_val',
+            'arg_value',
         )
-        model = models.Main
+        model = models.HistoryArg
 
-class Main_main(serializers.ModelSerializer):
-    class Meta:
-        fields = (
-            'user_id',
-            'stamp_id',
-            'date',
-        )
-        model = models.Main
-
-class Main_arg(serializers.ModelSerializer):
-    class Meta:
-        fields = (
-            'user_id',
-            'stamp_id',
-            'date',
-            'arg_name',
-        )
-        model = models.Main
-
-class Main_main_argsGet(serializers.Serializer):
-    user_id = serializers.PrimaryKeyRelatedField(queryset=models.User.objects.all())
-    stamp_id = serializers.PrimaryKeyRelatedField(queryset=models.Stamp.objects.all())
-
-    date = serializers.DateField()
-
-    main_vals = serializers.CharField()
 
 # endregion
