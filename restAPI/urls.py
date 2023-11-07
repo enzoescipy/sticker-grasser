@@ -7,7 +7,7 @@ urlpatterns = [
     path(route='user/update', view=views.User_UPDATE.as_view(), name='user_update'),
 
     path(route='project/create/project', view=views.Project_CREATE_project.as_view(), name='project_create_project'),
-    # path('project/create/todo', views.Project_CREATE_todo.as_view(), name='project_create_todo'),
+    path(route='project/create/todo', view=views.Project_CREATE_todo.as_view(), name='project_create_todo'),
     # path('project/retrieve/user', views.Project_RETRIEVE_user.as_view(), name='project_retrieve_user'),
     # path('project/retrieve/project', views.Project_RETRIEVE_project.as_view(), name='project_retrieve_project'),
     # path('project/delete/todo', views.Project_DELETE_todo.as_view(), name='project_delete_todo'),

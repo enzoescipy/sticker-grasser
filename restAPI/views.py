@@ -27,124 +27,19 @@ security level :
 user_fkey_str = serializers.user_fkey_str
 # WARNING : you must get the current target user pkey, and call it like self.isLogginedUserMatch(user_pk) !
 # you should override the get_queryset method and execute the query_validation manually.
-class IsOwner_permission_Mixin:
-    def isLogginedUserMatch(self, requested_user_id):
+class IsOwner_permission_Mixin(object):
+    def isLogginedUserMatch(self, requested_user):
         # check if owner of instance is matched the caller of this view.
         logged_in_user = self.request.user
-        logged_in_user_id = getattr(logged_in_user, "id")
+
+        print("IsOwner_permission_Mixin Security validation : ", requested_user, logged_in_user)
         
-        if logged_in_user_id != requested_user_id:
+        if logged_in_user != requested_user:
             superuser = getattr(logged_in_user, "is_superuser")
             if superuser != True:
+                # return False
                 raise exceptions.ValidationError("current logged in user have not owned licence for this request.")
-
-class BasicValidate():
-    """
-    convinent validation static functions.
-    """
-
-    harmful_strings =  ['*', '?', '%', '&', '$', '(', ')', '#', '^', '@', '!', '~', '+', '=', ",", "'", '"',"/", "."]
-    harmful_email_strings =  ['*', '?', '%', '&', '$', '(', ')', '#', '^', '!', '~', '+', '=', ",", "'", '"',"/"]
-
-    @classmethod
-    def __is_harmless_str(cls, string:str, case:str = None) -> bool:
-        """
-        inspect the dangerous symbols included from string like :
-        '*', '?', '%', '&', '$', '(', ')', '#', '^', '@', '!', '~', '+', '=', ",", "'", '"',"/", "."
-        
-        if case == "email", '@', '.'  will be excluded.
-        
-        Params:
-            - str string : inspect targeted string
-        Returns:
-            - bool isHarmless
-                + true -> dangerous symbols not included
-                + false -> dangerous symbols included
-        """
-        harmful_strings = cls.harmful_strings
-        if case == "email":
-            harmful_strings = cls.harmful_email_strings
-            
-        for symbol in harmful_strings:
-            if symbol in string:
-                return False
-        return True
-                
-    @staticmethod
-    def validateType(value_type, name:str, value):
-        """
-        validate if 
-            - value is type (type check)
-            - value is not None
-
-        """
-        if type(value) is not value_type:
-            CustomExceptionRaise.NoneOrTypeInvalidError(name)
-
-    
-    @staticmethod
-    def validateString(name:str, value:str, allow_empty=False, allow_danger_character=False, case:str=""):
-        """
-        validate if
-            - check if value is string and not None
-            - check if value is not the empty string.
-              (do not check if allow_empty=True)
-            - chekc if value is not containing danger character
-              (do not check if allow_danger_character=True)
-        
-        """
-        if type(value) is not str:
-            CustomExceptionRaise.NoneOrTypeInvalidError(paramName=name)
-        elif len(value) < 1 and not allow_empty:
-            CustomExceptionRaise.EmptyStringError(paramName=name)
-        elif  not BasicValidate.__is_harmless_str(string=value, case=case) and not allow_danger_character:
-            print(not BasicValidate.__is_harmless_str(string=value, case=case) and not allow_danger_character,
-                  BasicValidate.__is_harmless_str(string=value, case=case),
-                  allow_danger_character)
-            CustomExceptionRaise.HarmfulInputError(paramName=name)
-
-
-class CustomExceptionRaise():
-    """
-    convinent custom exception raise functions.
-    WARNING : this is not the custom error handler!
-    """
-    @staticmethod
-    def NoneOrTypeInvalidError(paramName):
-        """
-        paramName cannot be null or blank.
-        """
-        raise exceptions.ValidationError(f'{paramName} cannot be null or blank')
-    
-    @staticmethod
-    def EmptyStringError(paramName):
-        """
-        paramName string cannot be empty string.
-        """
-        raise exceptions.ValidationError(f'{paramName} string cannot be empty string.')
-
-    @staticmethod
-    def HarmfulInputError(paramName):
-        """
-        paramName have(has) the harmful character(s).
-        """
-        raise exceptions.ValidationError(f'{paramName} have(has) the harmful character(s).')
-    
-    @staticmethod
-    def UniqueRuleViolatedError(paramName, uniqueModel):
-        """
-        paramName violated the UNIQUE rule that the params within uniqueModel must be UNIQUE.
-        """
-        raise exceptions.NotAcceptable(f'{paramName} violated the UNIQUE rule that the params within {uniqueModel} must be UNIQUE.')
-
-    @staticmethod
-    def NotFoundError(paramName, notFoundModel):
-        """
-        paramName not found within the notFoundModel.
-        """
-        raise exceptions.NotFound(f"{paramName} not found within the {notFoundModel}.")
-    
-
+        # return True
 
 
 
@@ -204,7 +99,7 @@ User_DELETE : D0, unsupported.
 
 ## region PROJECT API
 
-class Project_CREATE_project(generics.CreateAPIView, IsOwner_permission_Mixin):
+class Project_CREATE_project(IsOwner_permission_Mixin, generics.CreateAPIView):
     """
     # Project_CREATE_project
         SECURITY LEVEL C2
@@ -217,85 +112,48 @@ class Project_CREATE_project(generics.CreateAPIView, IsOwner_permission_Mixin):
     database changes
         - model Project will get the new row of project.
     """
-    serializer_class = serializers.Project
+    serializer_class = serializers.Project_CREATE_project
     queryset = models.Project.objects.all()
     permission_classes = [permissions.IsAuthenticated]
-
-    def query_validation(self):
-        """
-        1. user_fkey
-            - check if selected int is corresponding the unique user pkey
-        2. project_name
-            - type, empty, danger_character validation
-            - check if project_name is not already defined in the range of selected User.
-        """
-        # get params from request
-        user_fkey_str = 'user_fkey'
-        project_name_str = 'project_name'
-        user_fkey = self.request.POST.get(user_fkey_str)
-        project_name = self.request.POST.get(project_name_str)
-
-        # basic validations
-        BasicValidate.validateString(name=project_name_str, value=project_name)
-
-        # check if selected user_fkey is corredponding the unique user pkey
-        queryset = models.User.objects.filter(Q(pk = user_fkey))
-        if not queryset.exists():
-            CustomExceptionRaise.NotFoundError(paramName=user_fkey_str, notFoundModel="User")
-
-        # check if logined user is matching with the request
-        self.isLogginedUserMatch(requested_user_id=user_fkey)
-
-        # check if project_name is NOT already defined in the range of selected User.
-        queryset = models.Project.objects.filter(Q(project_name=project_name) & Q(user_fkey=user_fkey))
-        if queryset.exists():
-            CustomExceptionRaise.UniqueRuleViolatedError(paramName=project_name_str, uniqueModel="Project")
     
     def create(self, request, *args, **kwargs):
-        self.query_validation()
-        return super().create(request, *args, **kwargs)
-    
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-# class Project_CREATE_todo(generics.CreateAPIView, IsOwner_permission_Mixin):
-#     """
-#     # Project_CREATE_todo
-#         SECURITY LEVEL C2
-#         - create an todo model row.
-#     POST params
-#         - user_id : specific user's id. 
-#         - project_name : project_name that will be created
-#         - todo_name : todo_name that will be created
-#     database changes
-#         - model Project will get new row of project.
-#         - row will created with todo_name=<todo_name>
-#     """
+        self.isLogginedUserMatch(requested_user=serializer.validated_data['user_fkey'])
 
-#     serializer_class = serializers.Project_all
-#     permission_classes = [permissions.IsAuthenticated]
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.validated_data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-#     def query_validation(self):
-#         super().query_validation()
-#         queryset = models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
-#                                                  & Q(user_id = self.request.POST.get('user_id')))
-#         if queryset.exists() == False:
-#             raise exceptions.ValidationError('project_name must already exists in the db with the corresponding user_id.')
-#         if self.request.POST.get('todo_name') == '' or self.request.POST.get('todo_name') == None:
-#             raise exceptions.ValidationError('todo_name cannot be null or blank')
-        
-#         queryset = models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
-#                                                  & Q(user_id = self.request.POST.get('user_id'))
-#                                                  & Q(todo_name = self.request.POST.get('todo_name')))
-#         if queryset.exists() == True:
-#             raise exceptions.ValidationError('todo_name must be unique if project_name and user_id is same.')
-    
-#     def get_queryset(self):
-#         return models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
-#                                             & Q(user_id = self.request.POST.get('user_id'))
-#                                             & Q(todo_name = self.request.POST.get('todo_name')))
 
-#     def create(self, request, *args, **kwargs):
-#         self.query_validation()
-#         return super().create(request, *args, **kwargs)
+class Project_CREATE_todo(IsOwner_permission_Mixin, generics.CreateAPIView):
+    """
+    # Project_CREATE_todo
+        SECURITY LEVEL C2
+        - create an todo model row.
+    POST params
+        - user_id : specific user's id. 
+        - project_name : project_name that will be created
+        - todo_name : todo_name that will be created
+    database changes
+        - model Project will get new row of project.
+        - row will created with todo_name=<todo_name>
+    """
+
+    serializer_class = serializers.Project_CREATE_todo
+    queryset = models.Todo.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        self.isLogginedUserMatch(requested_user=serializer.validated_data['project_fkey'].user_fkey)
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.validated_data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 # class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
 #     """
