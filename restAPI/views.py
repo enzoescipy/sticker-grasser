@@ -155,45 +155,32 @@ class Project_CREATE_todo(IsOwner_permission_Mixin, generics.CreateAPIView):
         headers = self.get_success_headers(serializer.validated_data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-# class Project_RETRIEVE_project(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
-#     """
-#     # Project_RETRIEVE_project
-#         SECURITY LEVEL r2
-#         - retrieve the list of todo, inside of specific project.
-#         - only search for target project_name
-#     POST params
-#         - user_id
-#         - project_name
-#     """
+class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
+    """
+    # Project_RETRIEVE_project
+        SECURITY LEVEL r2
+        - retrieve the list of todo, inside of specific project.
+        - only search for target project_name
+    POST params
+        - user_id
+        - project_name
+    """
 
-#     serializer_class = serializers.Project_project
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_serializer_class(self):
-#         if len(self.request.POST) == 0:
-#             return serializers.Project_project
-#         else:
-#             return serializers.Project_all
+    permission_classes = [permissions.IsAuthenticated]
+    def get_serializer_class(self):
+        if len(self.request.POST) == 0:
+            return serializers.Project_RETRIEVE_project_POST
+        else:
+            return serializers.Project_RETRIEVE_project_LIST
         
-#     def query_validation(self):
-#         super().query_validation()
-#         if len(self.request.POST) == 0:
-#             return models.Project.objects.none()
-        
-#         queryset = models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
-#                                                  & Q(user_id = self.request.POST.get('user_id')))
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-#         if queryset.exists() == False:
-#             raise exceptions.ValidationError('project_name must already exists in the db with correct user_id.') 
+        self.isLogginedUserMatch(requested_user=serializer.validated_data['project_fkey'].user_fkey)
 
-#     def get_queryset(self):
-#         return models.Project.objects.filter(Q(project_name=self.request.POST.get('project_name')) 
-#                                              & Q(user_id = self.request.POST.get('user_id')) 
-#                                              & ~Q(todo_name=''))
-
-#     def post(self, request, *args, **kwargs):
-#         self.query_validation()
-#         return self.list(request, *args, **kwargs)
+        headers = self.get_success_headers(serializer.validated_data)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED, headers=headers)
 
 # class Project_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
 #     """

@@ -232,7 +232,33 @@ class Project_CREATE_todo(serializers.ModelSerializer):
             'todo_name': todo_name
         }
 
+class Project_RETRIEVE_project_POST(serializers.ModelSerializer):
+    email = serializers.CharField(write_only=True)
 
+    class Meta:
+        model = models.Project
+        fields = ['email', 'user_fkey']
+        extra_kwargs = {'user_fkey':{'read_only':True}}
+        
+    def to_internal_value(self, data):
+        email = data.get('email')
+
+        # check if selected email is corredponding the unique user pkey
+        queryset = models.User.objects.filter(email=email)
+        if not queryset.exists():
+            CustomExceptionRaise.NotFoundError(paramName='email', notFoundModel="User")
+        user_fkey = queryset[0]
+        
+        return {
+            'user_fkey': user_fkey,
+        }
+
+class Project_RETRIEVE_project_LIST(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'project_name',
+        )
+        model = models.Project
 
 # class Project_set(serializers.Serializer):
 #     # user_fkey = serializers.PrimaryKeyRelatedField(queryset = models.User.objects.all)
@@ -247,13 +273,13 @@ class Project_CREATE_todo(serializers.ModelSerializer):
 #         )
 #         model = models.Project
 
-class Todo_get(serializers.ModelSerializer):
-    class Meta:
-        fields = (
-            'project_fkey',
-            'todo_name',
-        )
-        model = models.Todo
+# class Todo_get(serializers.ModelSerializer):
+#     class Meta:
+#         fields = (
+#             'project_fkey',
+#             'todo_name',
+#         )
+#         model = models.Todo
 
 
 #endregion
