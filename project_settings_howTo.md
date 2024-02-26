@@ -12,8 +12,7 @@
     3. in ./ , 
         - there are no migrations in this project. so,
         - manage.py createsuperuser
-        - manage.py makemigrations
-        - manage.py migrate
+        - manage.py migrate --run-syncdb
     4. in ./ ,
         - manage.py runserver
     5. (for docker building) in ./ ,

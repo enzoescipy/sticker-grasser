@@ -161,20 +161,15 @@ class Project_RETRIEVE_project(generics.ListAPIView):
     """
 
     permission_classes = [permissions.IsAuthenticated]
-    def get_serializer_class(self):
-        if len(self.request.POST) == 0:
-            return serializers.Project_RETRIEVE_project_POST
-        else:
-            return serializers.Project_RETRIEVE_project_LIST
-        
-    def create(self, request, *args, **kwargs):
+    serializer_class = serializers.Project_RETRIEVE_project
+
+    def get_queryset(self):
+        return models.Project.objects.filter(user_fkey=self.request.user)        
+    def get(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        self.isLogginedUserMatch(requested_user=serializer.validated_data['project_fkey'].user_fkey)
-
-        headers = self.get_success_headers(serializer.validated_data)
-        return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
+        return self.list(serializer.data, status=status.HTTP_200_OK)
 
 # class Project_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, 
 #     """
