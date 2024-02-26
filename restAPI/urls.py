@@ -9,7 +9,7 @@ urlpatterns = [
     path(route='project/create/project', view=views.Project_CREATE_project.as_view(), name='project_create_project'),
     path(route='project/create/todo', view=views.Project_CREATE_todo.as_view(), name='project_create_todo'),
     path(route='project/retrieve/project', view=views.Project_RETRIEVE_project.as_view(), name='project_retrieve_project'),
-    # path('project/retrieve/project', views.Project_RETRIEVE_project.as_view(), name='project_retrieve_project'),
+    path('project/retrieve/todo', views.Project_RETRIEVE_todo.as_view(), name='project_retrieve_todo'),
     # path('project/delete/todo', views.Project_DELETE_todo.as_view(), name='project_delete_todo'),
     # path('project/delete/project', views.Project_DELETE_project.as_view(), name='project_delete_project'),
     

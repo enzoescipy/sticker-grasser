@@ -153,11 +153,8 @@ class Project_RETRIEVE_project(generics.ListAPIView):
     """
     # Project_RETRIEVE_project
         SECURITY LEVEL r2
-        - retrieve the list of todo, inside of specific project.
-        - only search for target project_name
-    POST params
-        - email
-        - project_name
+        - retrieve the list of project, inside of current logged in user.
+    GET (no params)
     """
 
     permission_classes = [permissions.IsAuthenticated]
@@ -171,32 +168,30 @@ class Project_RETRIEVE_project(generics.ListAPIView):
 
         return self.list(serializer.data, status=status.HTTP_200_OK)
 
-# class Project_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, 
-#     """
-#     # Project_RETRIEVE_user
-#         SECURITY LEVEL r2
-#         - retrieve the list of project, with the specific user.
-#         - only search for target user_id
-#     GET params
-#         - user_id
-#     """
+class Project_RETRIEVE_todo(generics.ListAPIView):
+    """
+    # Project_RETRIEVE_project
+        SECURITY LEVEL r2
+        - retrieve the list of todo, inside of current logged in user's specific project.
+    POST params
+        - project_name
+    """
 
-#     serializer_class = serializers.Project_user
-#     permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = serializers.Project_RETRIEVE_todo
 
-#     def get_serializer_class(self):
-#         if len(self.request.POST) == 0:
-#             return serializers.Project_user
-#         else:
-#             return serializers.Project_project
+    def get_queryset(self):
+        if len(self.request.POST) == 0:
+            return models.Todo.objects.none()
+        else:
+            return models.Todo.objects.filter(project_fkey=self.request.data.project_fkey)
         
-#     def get_queryset(self):
-#         self.query_validation()
-#         return models.Project.objects.filter(user_id = self.request.POST.get("user_id"))
-    
-#     def post(self, request, *args, **kwargs):
-#         self.query_validation()
-#         return self.list(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        return self.list(serializer.data, status=status.HTTP_200_OK)
+
     
 # class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
