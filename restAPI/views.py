@@ -27,19 +27,19 @@ security level :
 user_fkey_str = serializers.user_fkey_str
 # WARNING : you must get the current target user pkey, and call it like self.isLogginedUserMatch(user_pk) !
 # you should override the get_queryset method and execute the query_validation manually.
-class IsOwner_permission_Mixin(object):
-    def isLogginedUserMatch(self, requested_user):
-        # check if owner of instance is matched the caller of this view.
-        logged_in_user = self.request.user
+# class bject):
+#     def isLogginedUserMatch(self, requested_user):
+#         # check if owner of instance is matched the caller of this view.
+#         logged_in_user = self.request.user
 
-        print("IsOwner_permission_Mixin Security validation : ", requested_user, logged_in_user)
+#         print("ecurity validation : ", requested_user, logged_in_user)
         
-        if logged_in_user != requested_user:
-            superuser = getattr(logged_in_user, "is_superuser")
-            if superuser != True:
-                # return False
-                raise exceptions.ValidationError("current logged in user have not owned licence for this request.")
-        # return True
+#         if logged_in_user != requested_user:
+#             superuser = getattr(logged_in_user, "is_superuser")
+#             if superuser != True:
+#                 # return False
+#                 raise exceptions.ValidationError("current logged in user have not owned licence for this request.")
+#         # return True
 
 
 
@@ -67,7 +67,7 @@ class User_CREATE(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        return Response({}, status=status.HTTP_201_CREATED, headers=headers)
+        return Response({}, status=status.HTTP_200_OK, headers=headers)
 
 class User_UPDATE(generics.UpdateAPIView):
     """
@@ -76,7 +76,6 @@ class User_UPDATE(generics.UpdateAPIView):
         - update an user profile
         - targeted user is currently logged in user.
     POST params
-        - Email
         - password
     database changes
         - logged in user will be updated.
@@ -99,14 +98,12 @@ User_DELETE : D0, unsupported.
 
 ## region PROJECT API
 
-class Project_CREATE_project(IsOwner_permission_Mixin, generics.CreateAPIView):
+class Project_CREATE_project(generics.CreateAPIView):
     """
     # Project_CREATE_project
         SECURITY LEVEL C2
         - create an project model row.
     POST params
-        - email : User model's str field email
-            -> specify which user is creating this project.
         - project_name : project_name (UNIQUE by each User)
             -> project_name that will be created
     database changes
@@ -118,22 +115,20 @@ class Project_CREATE_project(IsOwner_permission_Mixin, generics.CreateAPIView):
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        serializer.inject_user(self.request.user)
         serializer.is_valid(raise_exception=True)
-
-        self.isLogginedUserMatch(requested_user=serializer.validated_data['user_fkey'])
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.validated_data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 
 
-class Project_CREATE_todo(IsOwner_permission_Mixin, generics.CreateAPIView):
+class Project_CREATE_todo(generics.CreateAPIView):
     """
     # Project_CREATE_todo
         SECURITY LEVEL C2
         - create an todo model row.
     POST params
-        - user_id : specific user's id. 
         - project_name : project_name that will be created
         - todo_name : todo_name that will be created
     database changes
@@ -147,22 +142,21 @@ class Project_CREATE_todo(IsOwner_permission_Mixin, generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        serializer.inject_user(self.request.user)
         serializer.is_valid(raise_exception=True)
-
-        self.isLogginedUserMatch(requested_user=serializer.validated_data['project_fkey'].user_fkey)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.validated_data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 
-class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
+class Project_RETRIEVE_project(generics.ListAPIView):
     """
     # Project_RETRIEVE_project
         SECURITY LEVEL r2
         - retrieve the list of todo, inside of specific project.
         - only search for target project_name
     POST params
-        - user_id
+        - email
         - project_name
     """
 
@@ -180,9 +174,9 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
         self.isLogginedUserMatch(requested_user=serializer.validated_data['project_fkey'].user_fkey)
 
         headers = self.get_success_headers(serializer.validated_data)
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED, headers=headers)
+        return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 
-# class Project_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Project_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, 
 #     """
 #     # Project_RETRIEVE_user
 #         SECURITY LEVEL r2
@@ -209,7 +203,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.query_validation()
 #         return self.list(request, *args, **kwargs)
     
-# class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
 #     # Project_DELETE_todo
 #         SECURITY LEVEL d2
@@ -249,7 +243,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.get_queryset().delete()
 #         return response
     
-# class Project_DELETE_project(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Project_DELETE_project(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
 #     # Project_DELETE_project
 #         SECURITY LEVEL d2
@@ -286,7 +280,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 
 # #region STAMP API
 
-# class Stamp_CREATE_stamp(generics.CreateAPIView, IsOwner_permission_Mixin):
+# class Stamp_CREATE_stamp(generics.CreateAPIView, 
 #     """
 #     # Stamp_CREATE_stamp
 #         SECURITY LEVEL c2
@@ -317,7 +311,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.query_validation()
 #         return super().create(request, *args, **kwargs)
     
-# class Stamp_CREATE_subelement(generics.CreateAPIView, IsOwner_permission_Mixin):
+# class Stamp_CREATE_subelement(generics.CreateAPIView, 
 #     """
 #     # Stamp_CREATE_subelement
 #         SECURITY LEVEL c2
@@ -401,9 +395,9 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         serializer = self.get_serializer(data=request.data)
 #         serializer.is_valid(raise_exception=True)
 #         headers = self.get_success_headers(serializer.data)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+#         return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 
-# class Stamp_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Stamp_RETRIEVE_user(mixins.ListModelMixin, generics.GenericAPIView, 
 #     """
 #     # Project_RETRIEVE_user
 #         SECURITY LEVEL r2
@@ -430,7 +424,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.query_validation()
 #         return self.list(request, *args, **kwargs)
     
-# class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Stamp_RETRIEVE_stamp(mixins.ListModelMixin, generics.GenericAPIView, 
 #     """
 #     # Project_RETRIEVE_project
 #         SECURITY LEVEL r2
@@ -469,7 +463,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.query_validation()
 #         return self.list(request, *args, **kwargs)
 
-# class Stamp_RETRIEVE_subelement(generics.ListAPIView, IsOwner_permission_Mixin):
+# class Stamp_RETRIEVE_subelement(generics.ListAPIView, 
 #     """
 #     # Stamp_RETRIEVE_subelement
 #         SECURITY LEVEL r2
@@ -512,7 +506,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.query_validation()
 #         return self.list(request, *args, **kwargs)
 
-# class Stamp_DELETE_stamp(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Stamp_DELETE_stamp(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
 #     # Stamp_DELETE_stamp
 #         SECURITY LEVEL d2
@@ -543,7 +537,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.get_queryset().delete()
 #         return response
     
-# class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Stamp_DELETE_subelement(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
 #     # Stamp_DELETE_subelement
 #         SECURITY LEVEL d2
@@ -581,7 +575,7 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         self.get_queryset().delete()
 #         return response
 
-# class Stamp_UPDATE_stamp(generics.CreateAPIView, IsOwner_permission_Mixin):
+# class Stamp_UPDATE_stamp(generics.CreateAPIView, 
 #     """
 #     # Stamp_UPDATE_stamp
 #         SECURITY LEVEL c2
@@ -628,9 +622,9 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         serializer = self.get_serializer(data=request.data)
 #         serializer.is_valid(raise_exception=True)
 #         headers = self.get_success_headers(serializer.data)
-#         return Response(serializer.data, status=status.HTTP_202_ACCEPTED, headers=headers)
+#         return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
     
-# class Stamp_UPDATE_subelement(generics.CreateAPIView, IsOwner_permission_Mixin):
+# class Stamp_UPDATE_subelement(generics.CreateAPIView, 
 #     """
 #     # Stamp_UPDATE_subelement
 #         SECURITY LEVEL c2
@@ -759,13 +753,13 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         serializer = self.get_serializer(data=request.data)
 #         serializer.is_valid(raise_exception=False)
 #         headers = self.get_success_headers(serializer.data)
-#         return Response(serializer.data, status=status.HTTP_202_ACCEPTED, headers=headers)
+#         return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 # #endregion
 
 
 # #region MAIN_API
 
-# class Main_CREATE_main(generics.CreateAPIView, IsOwner_permission_Mixin):
+# class Main_CREATE_main(generics.CreateAPIView, 
 #     """
 #     # Main_CREATE_main
 #         SECURITY LEVEL c2
@@ -849,9 +843,9 @@ class Project_RETRIEVE_project(generics.ListAPIView, IsOwner_permission_Mixin):
 #         serializer = self.get_serializer(data=request.data)
 #         serializer.is_valid(raise_exception=True)
 #         headers = self.get_success_headers(serializer.data)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+#         return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 
-# class Main_DELETE_main(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, IsOwner_permission_Mixin):
+# class Main_DELETE_main(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
 #     # Main_DELETE_main
 #         SECURITY LEVEL d2

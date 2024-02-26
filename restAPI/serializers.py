@@ -142,85 +142,60 @@ class User_updateSafe(serializers.ModelSerializer):
         instance.save()
 
         return instance
-
-class User_emailMixin(serializers.ModelSerializer):    
-    class Meta:
-        fields = (
-            'email',
-        )
-        model = models.User
+    
+class RequestUserPkeyMixin():
+    def inject_user(self, user):
+        self.user = user
+        
 
 #endregion
 
 
 #region PROJECT
 
-class Project_CREATE_project(serializers.ModelSerializer):
-    email = serializers.CharField(write_only=True)
+class Project_CREATE_project(serializers.ModelSerializer, RequestUserPkeyMixin):
 
     class Meta:
+        fields = ['project_name']
         model = models.Project
-        fields = ['email', 'user_fkey', 'project_name']
-        extra_kwargs = {'user_fkey':{'read_only':True}}
         
     def to_internal_value(self, data):
-        email = data.get('email')
         project_name = data.get('project_name')
         # basic validations
         BasicValidate.validateString(name='project_name', value=project_name)
         # BasicValidate.validateString(name='email', value=email)
 
-        # check if selected email is corredponding the unique user pkey
-        queryset = models.User.objects.filter(email=email)
-        if not queryset.exists():
-            CustomExceptionRaise.NotFoundError(paramName='email', notFoundModel="User")
-        user_fkey = queryset[0]
-
-        # # check if logined user is matching with the request
-        # self.isLogginedUserMatch(requested_user_id=user_fkey)
-
         # check if project_name is NOT already defined in the range of selected User.
-        queryset = models.Project.objects.filter(Q(project_name=project_name) & Q(user_fkey=user_fkey.pk))
+        queryset = models.Project.objects.filter(Q(project_name=project_name) & Q(user_fkey=self.user.pk))
         if queryset.exists():
             CustomExceptionRaise.UniqueRuleViolatedError(paramName='project_name', uniqueModel="Project")
         
         return {
-            'user_fkey': user_fkey,
-            'project_name': project_name
+            'project_name': project_name,
+            'user_fkey': self.user,
         }
     
-class Project_CREATE_todo(serializers.ModelSerializer):
-    email = serializers.CharField(write_only=True)
+class Project_CREATE_todo(serializers.ModelSerializer, RequestUserPkeyMixin):
     project_name = serializers.CharField(write_only=True)
 
     class Meta:
         model = models.Todo
-        fields = ['email', 'project_name','project_fkey', 'todo_name']
-        extra_kwargs = {'project_fkey':{'read_only':True}}
+        fields = ['project_name', 'todo_name']
         
     def to_internal_value(self, data):
         project_name = data.get('project_name')
         todo_name = data.get('todo_name')
-        email = data.get('email')
 
         # basic validations
         BasicValidate.validateString(name='project_name', value=project_name)
         BasicValidate.validateString(name='todo_name', value=todo_name)
 
-        # check if selected email is corredponding the unique user pkey
-        queryset = models.User.objects.filter(email=email)
-        if not queryset.exists():
-            CustomExceptionRaise.NotFoundError(paramName='email', notFoundModel="User")
-        user_fkey = queryset[0]
 
         # check if selected project_name is corredponding the unique user pkey
-        queryset = models.Project.objects.filter(project_name=project_name, user_fkey=user_fkey.pk)
+        queryset = models.Project.objects.filter(project_name=project_name, user_fkey=self.user.pk)
         if not queryset.exists():
             CustomExceptionRaise.NotFoundError(paramName='project_name', notFoundModel="Project")
         project_fkey = queryset[0]
-
-        # # check if logined user is matching with the request
-        # self.isLogginedUserMatch(requested_user_id=project_fkey)
 
         # check if todo_name is NOT already defined in the range of selected Project.
         queryset = models.Todo.objects.filter(Q(todo_name=todo_name) & Q(project_fkey=project_fkey.pk))
@@ -232,7 +207,7 @@ class Project_CREATE_todo(serializers.ModelSerializer):
             'todo_name': todo_name
         }
 
-class Project_RETRIEVE_project_POST(serializers.ModelSerializer):
+class Project_RETRIEVE_project_POST(serializers.ModelSerializer, RequestUserPkeyMixin):
     email = serializers.CharField(write_only=True)
 
     class Meta:
