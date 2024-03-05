@@ -207,19 +207,42 @@ class Project_CREATE_todo(serializers.ModelSerializer, RequestUserPkeyMixin):
             'todo_name': todo_name
         }
 
-class Project_RETRIEVE_project(serializers.ModelSerializer, RequestUserPkeyMixin):
+class Project_RETRIEVE_project(serializers.ModelSerializer):
 
     class Meta:
         model = models.Project
         fields = ['project_name']
         extra_kwargs = {'project_name':{'read_only':True}}
 
-class Project_RETRIEVE_todo(serializers.ModelSerializer, RequestUserPkeyMixin):
+class Project_RETRIEVE_todo(serializers.ModelSerializer):
+    project_name = serializers.CharField(write_only=True)
 
     class Meta:
         model = models.Todo
-        fields = ['']
+        fields = ['todo_name','project_name']
         extra_kwargs = {'todo_name':{'read_only':True}}
 
+# class Project_DELETE_project(serializers.ModelSerializer, RequestUserPkeyMixin):
+
+#     class Meta:
+#         fields = ['project_name']
+#         model = models.Project
+        
+#     def to_internal_value(self, data):
+#         project_name = data.get('project_name')
+#         # basic validations
+#         BasicValidate.validateString(name='project_name', value=project_name)
+#         # BasicValidate.validateString(name='email', value=email)
+
+#         # check if project_name IS already defined in the range of selected User.
+#         queryset = models.Project.objects.filter(Q(project_name=project_name) & Q(user_fkey=self.user.pk))
+#         if not queryset.exists():
+#             CustomExceptionRaise.NotFoundError(paramName='project_name', notFoundModel="Project")
+        
+#         return {
+#             'project_name': project_name,
+#             'user_fkey': self.user,
+#         }
+    
 
 # endregion

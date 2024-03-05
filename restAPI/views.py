@@ -18,10 +18,10 @@ from . import subelement as sub
 security level : 
     CRUD0 -> nobody can [read/write/delete/create] these value, superuser only.
     CRUD1 -> only staff can [read/write/delete/create] these value.
-    CRUD2 -> only the authorized user can access this view, only for named by matching user.
+    CRUD2 -> only the authorized user can access this view, and also,
         - one cannot CRUD the other user's data. that means requested user_id could be mached to loggined user_id.
         - staff can access CRUD of this data.
-    CRUD3 -> only the authorized user can [read/write/delete/create] these value freely.
+    CRUD3 -> only the authorized user can [read/write/delete/create] these value but user can access all those api freely.
     CRUD4 -> all the un-authorized users can [read/write/delete/create] these value. 
 """
 user_fkey_str = serializers.user_fkey_str
@@ -101,7 +101,7 @@ User_DELETE : D0, unsupported.
 class Project_CREATE_project(generics.CreateAPIView):
     """
     # Project_CREATE_project
-        SECURITY LEVEL C2
+        SECURITY LEVEL 2
         - create an project model row.
     POST params
         - project_name : project_name (UNIQUE by each User)
@@ -126,7 +126,7 @@ class Project_CREATE_project(generics.CreateAPIView):
 class Project_CREATE_todo(generics.CreateAPIView):
     """
     # Project_CREATE_todo
-        SECURITY LEVEL C2
+        SECURITY LEVEL 2
         - create an todo model row.
     POST params
         - project_name : project_name that will be created
@@ -152,7 +152,7 @@ class Project_CREATE_todo(generics.CreateAPIView):
 class Project_RETRIEVE_project(generics.ListAPIView):
     """
     # Project_RETRIEVE_project
-        SECURITY LEVEL r2
+        SECURITY LEVEL 2
         - retrieve the list of project, inside of current logged in user.
     GET (no params)
     """
@@ -161,17 +161,17 @@ class Project_RETRIEVE_project(generics.ListAPIView):
     serializer_class = serializers.Project_RETRIEVE_project
 
     def get_queryset(self):
-        return models.Project.objects.filter(user_fkey=self.request.user)        
+        return models.Project.objects.filter(user_fkey=self.request.user.pk)        
     def get(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         return self.list(serializer.data, status=status.HTTP_200_OK)
 
-class Project_RETRIEVE_todo(generics.ListAPIView):
+class Project_RETRIEVE_todo(generics.ListCreateAPIView):
     """
     # Project_RETRIEVE_project
-        SECURITY LEVEL r2
+        SECURITY LEVEL 2
         - retrieve the list of todo, inside of current logged in user's specific project.
     POST params
         - project_name
@@ -184,7 +184,9 @@ class Project_RETRIEVE_todo(generics.ListAPIView):
         if len(self.request.POST) == 0:
             return models.Todo.objects.none()
         else:
-            return models.Todo.objects.filter(project_fkey=self.request.data.project_fkey)
+            project_name = self.request.data['project_name']
+            project_query = models.Project.objects.filter(project_name=project_name, user_fkey=self.request.user)
+            return models.Todo.objects.filter(project_fkey=project_query[0].pk)
         
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -192,7 +194,34 @@ class Project_RETRIEVE_todo(generics.ListAPIView):
 
         return self.list(serializer.data, status=status.HTTP_200_OK)
 
-    
+# class Project_DELETE_project(generics.DestroyAPIView):
+#     """
+#     # Project_CREATE_project
+#         SECURITY LEVEL 2
+#         - delete a project model row.
+#     POST params
+#         - project_name : project_name (UNIQUE by each User)
+#             -> project_name that will be deleted
+#     database changes
+#         - model Project will get rid of the targeted row.
+#     """
+#     serializer_class = serializers.Project_DELETE_project
+#     queryset = models.Project.objects.all()
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def destroy(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.inject_user(self.request.user)
+#         serializer.is_valid(raise_exception=True)
+
+#         self.perform_destroy()
+#         headers = self.get_success_headers(serializer.validated_data)
+#         return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
+
+
+
+
+
 # class Project_DELETE_todo(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView, 
 #     """
 #     # Project_DELETE_todo
